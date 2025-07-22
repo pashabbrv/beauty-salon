@@ -42,19 +42,20 @@
 ## 📦 Структура проекта
 <pre><code>backend/
 ├── app/
-│ ├── main.py
-│ ├── models/
-│ ├── routers/
-│ ├── services/
-│ └── utils/
-└── requirements.txt
+│ ├── server.py        # Точка входа: инициализация FastAPI-приложения
+│ ├── models/          # ORM-модели — таблицы БД     
+│ ├── routers/         # Разделённые по сущностям маршруты
+│ ├── services/        # Бизнес-логика, обработка данных
+│ └── utils/           # Утилиты: генерация Excel
+└── requirements.txt   # Необходимые библиотеки
 
 frontend/
-├── pages/
-├── components/
-└── public/
+├── pages/             # Страницы веб-приложения
+├── components/        # Компоненты веб-приложения 
+└── public/            # Статические файлы (иконки, изображения, favicon и т.д.)
 
 bot/
-├── main.py
-├── commands/
-└── utils/</code></pre>
+├── bot.py            # Точка входа WhatsApp бота: обработка входящих сообщений, запуск бота
+├── commands/         # Обработчики команд: /add_service, /delete_master и т.д.
+└── utils/            # # Утилиты: авторизация, экспорт в Excel
+</code></pre>
