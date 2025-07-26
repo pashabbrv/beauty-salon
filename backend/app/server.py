@@ -1,4 +1,5 @@
-from fastapi import FastAPI, status, Body, HTTPException
+from datetime import date, timedelta
+from fastapi import FastAPI, status, Body, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -21,17 +22,29 @@ app.add_middleware(
 
 
 @app.get('/api/appointments/')
-async def get_appointments():
+async def get_appointments(
+    date: Annotated[date | None, Query()] = None,
+    confirmed: Annotated[bool | None, Query()] = None
+):
     async with session_factory() as session:
         try:
             # Делаем JOIN запрос между Appointment и Customer
-            stmt = (
+            query = (
                 select(Appointment, Customer)
                 .join(Customer, Appointment.customer_id == Customer.id)
                 .order_by(Appointment.datetime)
             )
+            # Фильтрация по подтверждённости
+            if confirmed is not None:
+                query = query.where(Appointment.confirmed == confirmed)
+            # Фильтрация по дате записи
+            if date is not None:
+                query = query.where(
+                    Appointment.datetime >= date,
+                    Appointment.datetime < date + timedelta(days=1)
+                )
             
-            result = await session.execute(stmt)
+            result = await session.execute(query)
             appointments_data = result.all()
             
             # Форматируем результат в нужный формат
@@ -62,20 +75,20 @@ async def create_new_appointment(appointment: Annotated[SimpleAppointment, Body(
     async with session_factory() as session:
         try:
             # 1. Поиск пользователя по номеру телефона
-            stmt = select(Customer).where(Customer.phone == appointment.phone)
-            result = await session.execute(stmt)
+            query = select(Customer).where(Customer.phone == appointment.phone)
+            result = await session.execute(query)
             customer = result.scalar_one_or_none()
             
             # 2. Обработка пользователя
             if customer:
                 # Если имя отличается - обновляем
                 if customer.name != appointment.name:
-                    stmt = (
+                    query = (
                         update(Customer)
                         .where(Customer.id == customer.id)
                         .values(name=appointment.name)
                     )
-                    await session.execute(stmt)
+                    await session.execute(query)
             else:
                 # Создаем нового пользователя
                 customer = Customer(
