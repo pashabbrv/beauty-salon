@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from fastapi import FastAPI, status, Body, Query, Path, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Annotated
 
@@ -134,8 +134,8 @@ async def update_appointment(
     async with session_factory() as session:
         try:
             # Проверяем существование записи
-            stmt = select(Appointment).where(Appointment.id == appointment_id)
-            result = await session.execute(stmt)
+            query = select(Appointment).where(Appointment.id == appointment_id)
+            result = await session.execute(query)
             appointment = result.scalar_one_or_none()
             
             if not appointment:
@@ -157,6 +157,34 @@ async def update_appointment(
             await session.commit()
             
             return {'message': 'OK'}
+            
+        except SQLAlchemyError as e:
+            await session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f'Database error: {str(e)}'
+            )
+
+
+@app.delete(
+    '/api/appointments/{appointment_id}/',
+    status_code=status.HTTP_204_NO_CONTENT
+)
+async def ddelete_appointment(appointment_id: Annotated[int, Path()]):
+    async with session_factory() as session:
+        try:
+            # Прямое удаление без предварительной проверки
+            query = delete(Appointment).where(Appointment.id == appointment_id)
+            result = await session.execute(query)
+            
+            if result.rowcount == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail='Appointment not found'
+                )
+            
+            await session.commit()
+            return None
             
         except SQLAlchemyError as e:
             await session.rollback()
