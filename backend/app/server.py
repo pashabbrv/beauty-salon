@@ -170,7 +170,7 @@ async def update_appointment(
     '/api/appointments/{appointment_id}/',
     status_code=status.HTTP_204_NO_CONTENT
 )
-async def ddelete_appointment(appointment_id: Annotated[int, Path()]):
+async def delete_appointment(appointment_id: Annotated[int, Path()]):
     async with session_factory() as session:
         try:
             # Прямое удаление без предварительной проверки
@@ -188,6 +188,34 @@ async def ddelete_appointment(appointment_id: Annotated[int, Path()]):
             
         except SQLAlchemyError as e:
             await session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f'Database error: {str(e)}'
+            )
+
+
+@app.get('/api/customers/')
+async def get_customers():
+    async with session_factory() as session:
+        try:
+            # Создаем запрос для получения всех клиентов
+            query = select(Customer).order_by(Customer.id)
+            result = await session.execute(query)
+            customers = result.scalars().all()
+            
+            # Форматируем результат в нужный JSON-формат
+            customers_list = [
+                {
+                    'id': customer.id,
+                    'name': customer.name,
+                    'phone': customer.phone
+                }
+                for customer in customers
+            ]
+            
+            return customers_list
+            
+        except SQLAlchemyError as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f'Database error: {str(e)}'
