@@ -24,3 +24,11 @@ class NewService(BaseModel):
 class DBService(BaseModel):
     id: int
     name: str
+
+
+class MasterInfo(BaseModel):
+    phone: str
+    name: str
+
+class MasterDB(MasterInfo):
+    id: int
