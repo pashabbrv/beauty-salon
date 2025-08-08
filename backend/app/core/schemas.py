@@ -1,6 +1,5 @@
 from datetime import datetime as datetime_cls
 from pydantic import BaseModel
-from typing import Optional
 
 
 class SimpleAppointment(BaseModel):
@@ -16,3 +15,12 @@ class UpdateAppointment(BaseModel):
     master: str | None = None
     datetime: datetime_cls | None = None
     confirmed: bool | None = None
+
+
+class NewService(BaseModel):
+    name: str
+
+
+class DBService(BaseModel):
+    id: int
+    name: str
