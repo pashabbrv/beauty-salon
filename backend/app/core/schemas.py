@@ -17,11 +17,10 @@ class UpdateAppointment(BaseModel):
     confirmed: bool | None = None
 
 
-class NewService(BaseModel):
+class ServiceInfo(BaseModel):
     name: str
 
-
-class DBService(BaseModel):
+class ServiceDB(ServiceInfo):
     id: int
     name: str
 
