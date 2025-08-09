@@ -1,8 +1,8 @@
-from datetime import datetime as datetime_cls
+from datetime import time
 from pydantic import BaseModel
 
 
-class SimpleAppointment(BaseModel):
+'''class SimpleAppointment(BaseModel):
     name: str
     phone: str
     service: str
@@ -14,7 +14,7 @@ class UpdateAppointment(BaseModel):
     service: str | None = None
     master: str | None = None
     datetime: datetime_cls | None = None
-    confirmed: bool | None = None
+    confirmed: bool | None = None'''
 
 
 class ServiceInfo(BaseModel):
@@ -22,7 +22,9 @@ class ServiceInfo(BaseModel):
 
 class ServiceDB(ServiceInfo):
     id: int
-    name: str
+
+    class Config:
+        from_attributes = True
 
 
 class MasterInfo(BaseModel):
@@ -31,3 +33,20 @@ class MasterInfo(BaseModel):
 
 class MasterDB(MasterInfo):
     id: int
+
+    class Config:
+        from_attributes = True
+
+
+class OfferingCreate(BaseModel):
+    master_id: int
+    service_id: int
+    price: int
+    duration: time
+
+class OfferingGet(BaseModel):
+    id: int
+    master: MasterDB
+    service: ServiceDB
+    price: int
+    duration: time

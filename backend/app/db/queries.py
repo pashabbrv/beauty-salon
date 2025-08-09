@@ -16,6 +16,18 @@ async def select_all(session: AsyncSession, model: DeclarativeBase) -> list:
     return result.scalars().all()
 
 
+async def select_one(
+    session: AsyncSession,
+    model: Type[ORM],
+    filter: dict
+) -> ORM | None:
+    """Получение определённой записи из БД"""
+    obj = await session.execute(
+        select(model).filter_by(**filter)
+    )
+    return obj.scalar_one_or_none()
+
+
 async def insert_one(
     session: AsyncSession,
     model: Type[ORM],
@@ -25,10 +37,7 @@ async def insert_one(
 ) -> ORM:
     """Добавляет в таблицу определённой модели запись по схеме"""
     # Проверка, что такой объект уже существует
-    existing_obj = await session.execute(
-        select(model).filter_by(**exists_filter)
-    )
-    if existing_obj.scalar_one_or_none() is not None:
+    if await select_one(session, model, exists_filter) is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=error_msg

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+'''from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -9,7 +9,7 @@ from db.postgresql import get_session
 
 customers_router = APIRouter(prefix='/customers')
 
-'''
+
 @customers_router.get('/')
 async def get_customers(
     session: Annotated[AsyncSession, Depends(get_session)]

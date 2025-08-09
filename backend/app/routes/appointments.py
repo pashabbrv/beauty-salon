@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+'''from datetime import date, timedelta
 from fastapi import (
     APIRouter, status, Body, Query, Path, Depends, HTTPException
 )
@@ -13,7 +13,7 @@ from db.postgresql import get_session
 
 appointments_router = APIRouter(prefix='/appointments')
 
-'''
+
 @appointments_router.get('/')
 async def get_appointments(
     session: Annotated[AsyncSession, Depends(get_session)],

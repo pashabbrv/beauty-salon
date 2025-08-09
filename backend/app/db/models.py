@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time
 from sqlalchemy import String, ForeignKey, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from typing import Annotated
@@ -48,7 +48,7 @@ class Offering(Base):
         ForeignKey('services.id', ondelete='CASCADE')
     )
     price: Mapped[int]
-    duration: Mapped[timedelta]
+    duration: Mapped[time]
 
 
 class Appointment(Base):

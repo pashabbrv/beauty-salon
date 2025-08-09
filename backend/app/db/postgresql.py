@@ -21,7 +21,7 @@ async def get_session():
         try:
             yield session
         except SQLAlchemyError:
-            session.rollback()
+            await session.rollback()
             raise SQLAlchemyError()
             
 
