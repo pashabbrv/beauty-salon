@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, Body, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
@@ -22,17 +22,10 @@ async def get_all_masters(
 ):
     """Получение всех добавленных услуг мастеров"""
     result = await session.execute(
-        select(
-            Offering.id,
-            master_alias,
-            service_alias,
-            Offering.price,
-            Offering.duration
-        )
-        .join(master_alias, Offering.master_id == master_alias.id)
-        .join(service_alias, Offering.service_id == service_alias.id)
+        select(Offering)
+        .options(joinedload(Offering.master), joinedload(Offering.service))
     )
-    return result.all()
+    return result.scalars().all()
 
 
 @offerings_router.post(

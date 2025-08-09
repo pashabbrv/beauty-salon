@@ -1,20 +1,5 @@
-from datetime import time
+from datetime import datetime, time
 from pydantic import BaseModel
-
-
-'''class SimpleAppointment(BaseModel):
-    name: str
-    phone: str
-    service: str
-    master: str
-    datetime: datetime_cls
-
-
-class UpdateAppointment(BaseModel):
-    service: str | None = None
-    master: str | None = None
-    datetime: datetime_cls | None = None
-    confirmed: bool | None = None'''
 
 
 class ServiceInfo(BaseModel):
@@ -50,3 +35,21 @@ class OfferingGet(BaseModel):
     service: ServiceDB
     price: int
     duration: time
+
+    class Config:
+        from_attributes = True
+
+
+'''class AppointmentCreate(BaseModel):
+    name: str
+    phone: str
+    offering_id: int
+    datetime: datetime
+
+class AppointmentGet(BaseModel):
+    name: str
+    phone: str
+    offering: OfferingGet
+    datetime: datetime
+    confirmed: bool
+    created_at: bool'''

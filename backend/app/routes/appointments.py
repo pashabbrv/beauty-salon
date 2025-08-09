@@ -6,15 +6,16 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from core.schemas import SimpleAppointment, UpdateAppointment
-from db.models import Customer, Appointment
+from core.schemas import AppointmentCreate, AppointmentGet
+from db.models import Offering, Customer, Appointment
 from db.postgresql import get_session
+from db.queries import select_one
 
 
 appointments_router = APIRouter(prefix='/appointments')
 
 
-@appointments_router.get('/')
+@appointments_router.get('/', response_model=list[AppointmentGet])
 async def get_appointments(
     session: Annotated[AsyncSession, Depends(get_session)],
     date: Annotated[date | None, Query()] = None,
@@ -57,93 +58,55 @@ async def get_appointments(
     return formatted_appointments
 
 
-@appointments_router.post('/', status_code=status.HTTP_201_CREATED)
+@appointments_router.post(
+    '/',
+    response_model=AppointmentGet,
+    status_code=status.HTTP_201_CREATED
+)
 async def create_new_appointment(
     session: Annotated[AsyncSession, Depends(get_session)],
-    appointment: Annotated[SimpleAppointment, Body()]
+    appointment: Annotated[AppointmentCreate, Body()]
 ):
     """Запись на приём к мастеру"""
-    try:
-        # 1. Поиск пользователя по номеру телефона
-        query = select(Customer).where(Customer.phone == appointment.phone)
-        result = await session.execute(query)
-        customer = result.scalar_one_or_none()
-        
-        # 2. Обработка пользователя
-        if customer:
-            # Если имя отличается - обновляем
-            if customer.name != appointment.name:
-                query = (
-                    update(Customer)
-                    .where(Customer.id == customer.id)
-                    .values(name=appointment.name)
-                )
-                await session.execute(query)
-        else:
-            # Создаем нового пользователя
-            customer = Customer(
-                phone=appointment.phone,
-                name=appointment.name
-            )
-            session.add(customer)
-            await session.flush()  # Чтобы получить ID нового пользователя
-        
-        # 3. Создаем запись о назначении
-        new_appointment = Appointment(
-            customer_id=customer.id,
-            service=appointment.service,
-            master=appointment.master,
-            datetime=appointment.datetime
+    # 1. Поиск пользователя по номеру телефона
+    customer = await select_one(session, Customer, {'phone': appointment.phone})
+    
+    # 2. Обработка пользователя
+    if customer is None:
+        # Создаем нового пользователя
+        customer = Customer(
+            phone=appointment.phone,
+            name=appointment.name,
+            status='active'
         )
-        session.add(new_appointment)
-        
-        # 4. Сохраняем изменения
-        await session.commit()
-        
-        return {'message': 'OK'}
-        
-    except Exception as e:
-        await session.rollback()
+        await session.add(customer)
+        # Чтобы получить ID нового пользователя
+        await session.flush()
+    
+    # 3. Поиск услуги мастера по id
+    offering = await select_one(session, Offering, {'id', appointment.offering_id})
+    if offering is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Error creating appointment: {str(e)}'
-        )
-
-
-@appointments_router.patch('/{appointment_id}/')
-async def update_appointment(
-    session: Annotated[AsyncSession, Depends(get_session)],
-    appointment_id: Annotated[int, Path()],
-    new_appointment_info: Annotated[UpdateAppointment, Body()]
-):
-    """Обновление информации о записи по её id"""
-    # Проверяем существование записи
-    query = select(Appointment).where(Appointment.id == appointment_id)
-    result = await session.execute(query)
-    appointment = result.scalar_one_or_none()
-    
-    if not appointment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Appointment not found'
+            detail='Offering with such id doesn\'t exist'
         )
     
-    # Обновляем только указанные поля
-    if new_appointment_info.service is not None:
-        appointment.service = new_appointment_info.service
-    if new_appointment_info.master is not None:
-        appointment.master = new_appointment_info.master
-    if new_appointment_info.datetime is not None:
-        appointment.datetime = new_appointment_info.datetime
-    if new_appointment_info.confirmed is not None:
-        appointment.confirmed = new_appointment_info.confirmed
+    # 4. Создаём запись о назначении
+    new_appointment = Appointment(
+        name=appointment.name,
+        customer_id=customer.id,
+        offering_id=offering.id,
+        datetime=appointment.datetime
+    )
+    await session.add(new_appointment)
     
+    # 4. Сохраняем изменения
     await session.commit()
     
-    return {'message': 'OK'}
+    return {'message': 'OK'}'''
 
 
-@appointments_router.delete(
+'''@appointments_router.delete(
     '/{appointment_id}/',
     status_code=status.HTTP_204_NO_CONTENT
 )
@@ -161,5 +124,4 @@ async def delete_appointment(
             detail='Appointment not found'
         )
     await session.commit()
-    return None
-'''
+    return None'''

@@ -1,6 +1,8 @@
 from datetime import datetime, time
 from sqlalchemy import String, ForeignKey, text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import (
+    DeclarativeBase, Mapped, mapped_column, relationship
+)
 from typing import Annotated
 
 
@@ -40,6 +42,7 @@ class Service(Base):
 class Offering(Base):
     __tablename__ = 'offerings'
 
+    # Основные поля в таблице
     id: Mapped[int_pk]
     master_id: Mapped[int] = mapped_column(
         ForeignKey('masters.id', ondelete='CASCADE')
@@ -49,6 +52,10 @@ class Offering(Base):
     )
     price: Mapped[int]
     duration: Mapped[time]
+
+    # Отношения с другими ORM
+    master: Mapped['Master'] = relationship()
+    service: Mapped['Service'] = relationship()
 
 
 class Appointment(Base):
