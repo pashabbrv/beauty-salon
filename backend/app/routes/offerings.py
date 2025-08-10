@@ -4,6 +4,7 @@ from sqlalchemy.orm import aliased, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
+from core.auth import verify_token
 from core.schemas import OfferingCreate, OfferingGet, MasterDB, ServiceDB
 from db.models import Offering, Master, Service
 from db.postgresql import get_session
@@ -17,7 +18,7 @@ service_alias = aliased(Service, name="service")
 
 
 @offerings_router.get('/', response_model=list[OfferingGet])
-async def get_all_masters(
+async def get_all_offerings(
     session: Annotated[AsyncSession, Depends(get_session)]
 ):
     """Получение всех добавленных услуг мастеров"""
@@ -33,7 +34,8 @@ async def get_all_masters(
     response_model=OfferingGet,
     status_code=status.HTTP_201_CREATED
 )
-async def add_new_master(
+async def create_new_offering(
+    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     offering: Annotated[OfferingCreate, Body()]
 ):

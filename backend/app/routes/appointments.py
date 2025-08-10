@@ -1,14 +1,13 @@
 from datetime import date, timedelta
-from fastapi import (
-    APIRouter, status, Body, Query, Path, Depends, HTTPException
-)
+from fastapi import APIRouter, status, Body, Query, Depends, HTTPException
 from sqlalchemy import select, insert
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
+from core.auth import verify_token
 from core.schemas import AppointmentCreate, AppointmentGet
-from db.models import Offering, Customer, Appointment, Master, Service
+from db.models import Offering, Customer, Appointment
 from db.postgresql import get_session
 from db.queries import select_one
 
@@ -18,6 +17,7 @@ appointments_router = APIRouter(prefix='/appointments')
 
 @appointments_router.get('/', response_model=list[AppointmentGet])
 async def get_appointments(
+    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     date: Annotated[date | None, Query()] = None,
     confirmed: Annotated[bool | None, Query()] = None

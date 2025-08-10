@@ -2,6 +2,7 @@ from fastapi import APIRouter, status, Body, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
+from core.auth import verify_token
 from core.schemas import ServiceInfo, ServiceDB
 from db.models import Service
 from db.postgresql import get_session
@@ -12,7 +13,7 @@ services_router = APIRouter(prefix='/services')
 
 
 @services_router.get('/', response_model=list[ServiceDB])
-async def get_services(
+async def get_all_services(
     session: Annotated[AsyncSession, Depends(get_session)]
 ):
     """Получение всех предоставляемых услуг"""
@@ -25,7 +26,8 @@ async def get_services(
     response_model=ServiceDB,
     status_code=status.HTTP_201_CREATED
 )
-async def create_service(
+async def add_new_service(
+    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     service: Annotated[ServiceInfo, Body()]
 ):

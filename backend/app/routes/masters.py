@@ -2,6 +2,7 @@ from fastapi import APIRouter, status, Body, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
+from core.auth import verify_token
 from core.schemas import MasterInfo, MasterDB
 from db.models import Master
 from db.postgresql import get_session
@@ -26,6 +27,7 @@ async def get_all_masters(
     status_code=status.HTTP_201_CREATED
 )
 async def add_new_master(
+    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     master: Annotated[MasterInfo, Body()]
 ):

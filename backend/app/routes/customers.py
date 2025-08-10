@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Body, Path, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
+from core.auth import verify_token
 from core.schemas import CustomerGet, CustomersStatusUpdate
 from db.models import Customer
 from db.postgresql import get_session
@@ -13,6 +14,7 @@ customers_router = APIRouter(prefix='/customers')
 
 @customers_router.get('/', response_model=list[CustomerGet])
 async def get_customers(
+    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)]
 ):
     """Получение всех клиентов, записывавшихся когда-либо"""
@@ -22,11 +24,12 @@ async def get_customers(
 
 @customers_router.patch('/{phone}/status/', response_model=CustomerGet)
 async def change_customers_status(
+    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     phone: Annotated[str, Path()],
     new_status: Annotated[CustomersStatusUpdate, Body()]
 ):
-    """обновление статуса у пользователя по номеру телефона"""
+    """Обновление статуса у пользователя по номеру телефона"""
     customer = await select_one(session, Customer, {'phone': phone})
     if customer is None:
         raise HTTPException(
