@@ -57,3 +57,15 @@ class AppointmentGet(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CustomerGet(BaseModel):
+    id: int
+    phone: str
+    name: str
+    status: str
+    created_at: datetimetype
+
+
+class CustomersStatusUpdate(BaseModel):
+    status: str
