@@ -3,6 +3,7 @@ from sqlalchemy import String, ForeignKey, text
 from sqlalchemy.orm import (
     DeclarativeBase, Mapped, mapped_column, relationship
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 from typing import Annotated
 
 
@@ -61,6 +62,7 @@ class Offering(Base):
 class Appointment(Base):
     __tablename__ = 'appointments'
 
+    # Основные поля в таблице
     id: Mapped[int_pk]
     name: Mapped[str] = mapped_column(String(100))
     customer_id: Mapped[int] = mapped_column(
@@ -72,6 +74,14 @@ class Appointment(Base):
     datetime: Mapped[datetime]
     confirmed: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[creation_time]
+
+    # Отношения с другими ORM
+    customer: Mapped['Customer'] = relationship()
+    offering: Mapped['Offering'] = relationship()
+
+    @hybrid_property
+    def phone(self) -> str:
+        return self.customer.phone
 
 
 class Absence(Base):

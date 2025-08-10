@@ -17,7 +17,7 @@ app.add_middleware(
 )
 
 # Регистрация всех кастомных обработчиков ошибок
-register_exception_handlers(app)
+#register_exception_handlers(app)
 
 # Регистрация всех маршрутов
 for router in routers:

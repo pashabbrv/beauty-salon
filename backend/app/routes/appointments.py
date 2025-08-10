@@ -1,13 +1,14 @@
-'''from datetime import date, timedelta
+from datetime import date, timedelta
 from fastapi import (
     APIRouter, status, Body, Query, Path, Depends, HTTPException
 )
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, insert
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
 from core.schemas import AppointmentCreate, AppointmentGet
-from db.models import Offering, Customer, Appointment
+from db.models import Offering, Customer, Appointment, Master, Service
 from db.postgresql import get_session
 from db.queries import select_one
 
@@ -22,11 +23,13 @@ async def get_appointments(
     confirmed: Annotated[bool | None, Query()] = None
 ):
     """Получение всех записей"""
-    # Делаем JOIN запрос между Appointment и Customer
     query = (
-        select(Appointment, Customer)
-        .join(Customer, Appointment.customer_id == Customer.id)
-        .order_by(Appointment.datetime)
+        select(Appointment)
+        .options(
+            joinedload(Appointment.customer),
+            joinedload(Appointment.offering).joinedload(Offering.master),
+            joinedload(Appointment.offering).joinedload(Offering.service)
+        )
     )
     # Фильтрация по подтверждённости
     if confirmed is not None:
@@ -37,25 +40,9 @@ async def get_appointments(
             Appointment.datetime >= date,
             Appointment.datetime < date + timedelta(days=1)
         )
-    
+    # Получение результата
     result = await session.execute(query)
-    appointments_data = result.all()
-    
-    # Форматируем результат в нужный формат
-    formatted_appointments = [
-        {
-            'id': appointment.id,
-            'name': customer.name,
-            'phone': customer.phone,
-            'service': appointment.service,
-            'master': appointment.master,
-            'datetime': appointment.datetime.isoformat(),
-            'confirmed': appointment.confirmed
-        }
-        for appointment, customer in appointments_data
-    ]
-    
-    return formatted_appointments
+    return result.scalars().all()
 
 
 @appointments_router.post(
@@ -68,42 +55,52 @@ async def create_new_appointment(
     appointment: Annotated[AppointmentCreate, Body()]
 ):
     """Запись на приём к мастеру"""
-    # 1. Поиск пользователя по номеру телефона
+    # 1. Поиск пользователя по номеру телефона (с созданием нового по надобности)
     customer = await select_one(session, Customer, {'phone': appointment.phone})
-    
-    # 2. Обработка пользователя
     if customer is None:
-        # Создаем нового пользователя
-        customer = Customer(
-            phone=appointment.phone,
-            name=appointment.name,
-            status='active'
+        result = await session.execute(
+            insert(Customer)
+            .values(
+                phone=appointment.phone,
+                name=appointment.name,
+                status='active'
+            ).returning(Customer)
         )
-        await session.add(customer)
-        # Чтобы получить ID нового пользователя
-        await session.flush()
+        customer = result.scalar_one()
     
-    # 3. Поиск услуги мастера по id
-    offering = await select_one(session, Offering, {'id', appointment.offering_id})
+    # 2. Поиск услуги мастера по id
+    result = await session.execute(
+        select(Offering).where(Offering.id == appointment.offering_id)
+    )
+    offering = result.scalar_one_or_none()
     if offering is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Offering with such id doesn\'t exist'
         )
     
-    # 4. Создаём запись о назначении
-    new_appointment = Appointment(
-        name=appointment.name,
-        customer_id=customer.id,
-        offering_id=offering.id,
-        datetime=appointment.datetime
+    # 3. Создаём запись о назначении
+    result = await session.execute(
+        insert(Appointment)
+        .values(
+            name=appointment.name,
+            customer_id=customer.id,
+            offering_id=offering.id,
+            datetime=appointment.datetime
+        ).returning(Appointment)
+        .options(
+            joinedload(Appointment.customer),
+            joinedload(Appointment.offering).joinedload(Offering.master),
+            joinedload(Appointment.offering).joinedload(Offering.service)
+        )
     )
-    await session.add(new_appointment)
+    new_appointment = result.scalar_one()
     
     # 4. Сохраняем изменения
     await session.commit()
+    await session.refresh(new_appointment)
     
-    return {'message': 'OK'}'''
+    return new_appointment
 
 
 '''@appointments_router.delete(

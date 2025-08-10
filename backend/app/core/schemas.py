@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime as datetimetype, time
 from pydantic import BaseModel
 
 
@@ -40,16 +40,20 @@ class OfferingGet(BaseModel):
         from_attributes = True
 
 
-'''class AppointmentCreate(BaseModel):
+class AppointmentCreate(BaseModel):
     name: str
     phone: str
     offering_id: int
-    datetime: datetime
+    datetime: datetimetype
 
 class AppointmentGet(BaseModel):
+    id: int
     name: str
     phone: str
     offering: OfferingGet
-    datetime: datetime
+    datetime: datetimetype
     confirmed: bool
-    created_at: bool'''
+    created_at: datetimetype
+
+    class Config:
+        from_attributes = True
