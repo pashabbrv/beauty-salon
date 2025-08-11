@@ -1,4 +1,4 @@
-from fastapi import Request, status
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -13,6 +13,6 @@ def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     )
 
 
-def register_exception_handlers(app):
+def register_exception_handlers(app: FastAPI) -> None:
     """Функция для регистрации всех обработчиков ошибок"""
     app.exception_handler(SQLAlchemyError)(sqlalchemy_exception_handler)

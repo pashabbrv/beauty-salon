@@ -7,7 +7,7 @@ from typing import Annotated
 
 from core.auth import verify_token
 from core.schemas import AppointmentCreate, AppointmentGet
-from db.models import Offering, Customer, Appointment
+from db.models import Offering, Customer, Appointment, Occupation
 from db.postgresql import get_session
 from db.queries import select_one
 
@@ -28,7 +28,8 @@ async def get_appointments(
         .options(
             joinedload(Appointment.customer),
             joinedload(Appointment.offering).joinedload(Offering.master),
-            joinedload(Appointment.offering).joinedload(Offering.service)
+            joinedload(Appointment.offering).joinedload(Offering.service),
+            joinedload(Appointment.slot)
         )
     )
     # Фильтрация по подтверждённости
@@ -37,8 +38,8 @@ async def get_appointments(
     # Фильтрация по дате записи
     if date is not None:
         query = query.where(
-            Appointment.datetime >= date,
-            Appointment.datetime < date + timedelta(days=1)
+            Occupation.start >= date,
+            Occupation.start < date + timedelta(days=1)
         )
     # Получение результата
     result = await session.execute(query)
@@ -80,18 +81,31 @@ async def create_new_appointment(
         )
     
     # 3. Создаём запись о назначении
+    occupation_result = await session.execute(
+        insert(Occupation)
+        .values(
+            master_id=offering.master_id,
+            start=appointment.datetime,
+            end=appointment.datetime + timedelta(
+                hours=offering.duration.hour,
+                minutes=offering.duration.minute,
+                seconds=offering.duration.second
+            )
+        ).returning(Occupation.id)
+    )
     result = await session.execute(
         insert(Appointment)
         .values(
             name=appointment.name,
             customer_id=customer.id,
             offering_id=offering.id,
-            datetime=appointment.datetime
+            occupation_id=occupation_result.scalar_one()
         ).returning(Appointment)
         .options(
             joinedload(Appointment.customer),
             joinedload(Appointment.offering).joinedload(Offering.master),
-            joinedload(Appointment.offering).joinedload(Offering.service)
+            joinedload(Appointment.offering).joinedload(Offering.service),
+            joinedload(Appointment.slot)
         )
     )
     new_appointment = result.scalar_one()

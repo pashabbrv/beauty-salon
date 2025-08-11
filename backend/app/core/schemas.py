@@ -1,4 +1,4 @@
-from datetime import datetime as datetimetype, time
+from datetime import datetime, time
 from pydantic import BaseModel
 
 
@@ -40,20 +40,24 @@ class OfferingGet(BaseModel):
         from_attributes = True
 
 
+class TimeSlot(BaseModel):
+    start: datetime
+    end: datetime
+
 class AppointmentCreate(BaseModel):
     name: str
     phone: str
     offering_id: int
-    datetime: datetimetype
+    datetime: datetime
 
 class AppointmentGet(BaseModel):
     id: int
     name: str
     phone: str
     offering: OfferingGet
-    datetime: datetimetype
+    slot: TimeSlot
     confirmed: bool
-    created_at: datetimetype
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -64,7 +68,7 @@ class CustomerGet(BaseModel):
     phone: str
     name: str
     status: str
-    created_at: datetimetype
+    created_at: datetime
 
 
 class CustomersStatusUpdate(BaseModel):

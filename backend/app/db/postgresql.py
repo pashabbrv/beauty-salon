@@ -20,9 +20,9 @@ async def get_session():
     async with session_factory() as session:
         try:
             yield session
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             await session.rollback()
-            raise SQLAlchemyError()
+            raise e
             
 
 

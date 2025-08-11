@@ -59,6 +59,17 @@ class Offering(Base):
     service: Mapped['Service'] = relationship()
 
 
+class Occupation(Base):
+    __tablename__ = 'occupations'
+
+    id: Mapped[int_pk]
+    master_id: Mapped[int] = mapped_column(
+        ForeignKey('masters.id', ondelete='CASCADE')
+    )
+    start: Mapped[datetime]
+    end: Mapped[datetime]
+
+
 class Appointment(Base):
     __tablename__ = 'appointments'
 
@@ -71,26 +82,17 @@ class Appointment(Base):
     offering_id: Mapped[int] = mapped_column(
         ForeignKey('offerings.id', ondelete='SET NULL')
     )
-    datetime: Mapped[datetime]
+    occupation_id: Mapped[int] = mapped_column(
+        ForeignKey('occupations.id', ondelete='SET NULL')
+    )
     confirmed: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[creation_time]
 
     # Отношения с другими ORM
     customer: Mapped['Customer'] = relationship()
     offering: Mapped['Offering'] = relationship()
+    slot: Mapped['Occupation'] = relationship()
 
     @hybrid_property
     def phone(self) -> str:
         return self.customer.phone
-
-
-class Absence(Base):
-    __tablename__ = 'absences'
-
-    id: Mapped[int_pk]
-    master_id: Mapped[int] = mapped_column(
-        ForeignKey('masters.id', ondelete='CASCADE')
-    )
-    start: Mapped[datetime]
-    end: Mapped[datetime]
-    created_at: Mapped[creation_time]
