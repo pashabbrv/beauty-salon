@@ -1,10 +1,12 @@
-from fastapi import APIRouter, status, Body, Depends
+from fastapi import APIRouter, status, Body, Path, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
 from core.auth import verify_token
-from core.schemas import ServiceInfo, ServiceDB
-from db.models import Service
+from core.schemas import ServiceInfo, ServiceDB, OfferingGetMaster
+from db.models import Service, Offering
 from db.postgresql import get_session
 from db.queries import select_all, insert_one
 
@@ -40,3 +42,26 @@ async def add_new_service(
         error_msg='Service with this name already exists'
     )
     return ServiceDB.model_validate(new_service, from_attributes=True)
+
+
+@services_router.get(
+    '/{service_id}/offerings/',
+    response_model=list[OfferingGetMaster]
+)
+async def get_all_services_from_master(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    service_id: Annotated[int, Path()]
+):
+    '''Получение всех мастеров, выполняющих определённую услугу'''
+    result = await session.execute(
+        select(Service)
+        .where(Service.id == service_id)
+        .options(selectinload(Service.offerings).selectinload(Offering.master))
+    )
+    master = result.scalar_one_or_none()
+    if master is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Master with such id doesn\'t exist'
+        )
+    return master.offerings

@@ -28,16 +28,28 @@ class Customer(Base):
 class Master(Base):
     __tablename__ = 'masters'
 
+    # Основные поля в таблице
     id: Mapped[int_pk]
     phone: Mapped[str] = mapped_column(String(20))
     name: Mapped[str] = mapped_column(String(100))
+
+    # Отношения с другими ORM
+    offerings: Mapped[list['Offering']] = relationship(
+        back_populates='master'
+    )
 
 
 class Service(Base):
     __tablename__ = 'services'
 
+    # Основные поля в таблице
     id: Mapped[int_pk]
     name: Mapped[str] = mapped_column(String(100))
+
+    # Отношения с другими ORM
+    offerings: Mapped[list['Offering']] = relationship(
+        back_populates='service'
+    )
 
 
 class Offering(Base):
@@ -55,8 +67,8 @@ class Offering(Base):
     duration: Mapped[time]
 
     # Отношения с другими ORM
-    master: Mapped['Master'] = relationship()
-    service: Mapped['Service'] = relationship()
+    master: Mapped['Master'] = relationship(back_populates='offerings')
+    service: Mapped['Service'] = relationship(back_populates='offerings')
 
 
 class Occupation(Base):

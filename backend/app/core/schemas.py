@@ -34,15 +34,22 @@ class OfferingCreate(BaseModel):
     price: int
     duration: time
 
-class OfferingGet(BaseModel):
+class OfferingDBBase(BaseModel):
     id: int
-    master: MasterDB
-    service: ServiceDB
     price: int
     duration: time
 
     class Config:
         from_attributes = True
+
+class OfferingGetMaster(OfferingDBBase):
+    master: MasterDB
+
+class OfferingGetService(OfferingDBBase):
+    service: ServiceDB
+
+class OfferingGet(OfferingGetMaster, OfferingGetService):
+    pass
 
 
 class TimeSlot(BaseModel):
