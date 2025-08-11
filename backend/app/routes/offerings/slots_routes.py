@@ -53,18 +53,24 @@ def generate_time_slots(duration_h: int, duration_m: int) -> list[datetime]:
 
 def filter_busy_slots(
     slots: list[datetime],
-    busy_intervals: list[tuple[datetime, datetime]]
+    busy_intervals: list[tuple[datetime, datetime]],
+    offering_duration_h: int,
+    offering_duration_m: int
 ) -> list[datetime]:
     """Удаление слотов в зависимости от занятости мастера"""
     filtered_slots = []
+    offering_duration = timedelta(
+        hours=offering_duration_h,
+        minutes=offering_duration_m
+    )
     
     for slot in slots:
         is_busy = False
         for busy_start, busy_end in busy_intervals:
             # Проверяем, попадает ли slot в занятый интервал
-            if busy_start <= slot < busy_end:
+            if busy_start - offering_duration < slot < busy_end:
                 is_busy = True
-                break  # Достаточно одного пересечения
+                break
         if not is_busy:
             filtered_slots.append(slot)
     
@@ -99,6 +105,11 @@ async def get_free_time_for_two_weeks(
     occupations = result.scalars().all()
     busy_intervals = [(el.start, el.end) for el in occupations]
     # Фильтруем слоты и получаем все свободные
-    free_slots = filter_busy_slots(slots, busy_intervals)
+    free_slots = filter_busy_slots(
+        slots,
+        busy_intervals,
+        offering.duration.hour,
+        offering.duration.minute
+    )
 
     return free_slots
