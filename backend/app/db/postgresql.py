@@ -25,7 +25,6 @@ async def get_session():
             raise e
             
 
-
 async def create_tables():
     """Создание всех таблиц"""
     async with engine.begin() as conn:

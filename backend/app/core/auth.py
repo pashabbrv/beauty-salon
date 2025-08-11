@@ -1,6 +1,5 @@
 from fastapi import Header, HTTPException, status
 from typing import Annotated
-from functools import wraps
 from dotenv import load_dotenv
 from os import getenv
 

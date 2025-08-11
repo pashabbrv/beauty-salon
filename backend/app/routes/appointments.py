@@ -1,6 +1,8 @@
 from datetime import date, timedelta
-from fastapi import APIRouter, status, Body, Query, Depends, HTTPException
-from sqlalchemy import select, insert
+from fastapi import (
+    APIRouter, status, Body, Query, Path, Depends, HTTPException
+)
+from sqlalchemy import select, insert, update, delete
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -70,17 +72,14 @@ async def create_new_appointment(
         customer = result.scalar_one()
     
     # 2. Поиск услуги мастера по id
-    result = await session.execute(
-        select(Offering).where(Offering.id == appointment.offering_id)
-    )
-    offering = result.scalar_one_or_none()
+    offering = await select_one(session, Offering, {'id': appointment.offering_id})
     if offering is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Offering with such id doesn\'t exist'
         )
     
-    # 3. Создаём запись о назначении
+    # 3. Забиваем временной слот у мастера
     occupation_result = await session.execute(
         insert(Occupation)
         .values(
@@ -93,6 +92,8 @@ async def create_new_appointment(
             )
         ).returning(Occupation.id)
     )
+
+    # 4. Создаём запись в бд
     result = await session.execute(
         insert(Appointment)
         .values(
@@ -110,29 +111,67 @@ async def create_new_appointment(
     )
     new_appointment = result.scalar_one()
     
-    # 4. Сохраняем изменения
+    # 5. Сохраняем изменения
     await session.commit()
     await session.refresh(new_appointment)
     
     return new_appointment
 
 
-'''@appointments_router.delete(
+@appointments_router.delete(
     '/{appointment_id}/',
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_appointment(
+    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     appointment_id: Annotated[int, Path()]
 ):
     """Удаление записи по её id"""
-    query = delete(Appointment).where(Appointment.id == appointment_id)
-    result = await session.execute(query)
+    result = await session.execute(
+        delete(Appointment).where(Appointment.id == appointment_id)
+    )
     # Если записей с таким id не существовало
     if result.rowcount == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail='Appointment not found'
+            detail='Appointment with such id doesn\'t exist'
         )
     await session.commit()
-    return None'''
+    return None
+
+
+@appointments_router.post(
+    '/{appointment_id}/confirm/',
+    response_model=AppointmentGet
+)
+async def confirm_appointment(
+    _: Annotated[None, Depends(verify_token)], # Верификация по токену
+    session: Annotated[AsyncSession, Depends(get_session)],
+    appointment_id: Annotated[int, Path()]
+):
+    """Подтверждение записи по её id"""
+    result = await session.execute(
+        update(Appointment)
+        .values(confirmed=True)
+        .where(Appointment.id == appointment_id)
+    )
+    # Если записей с таким id не существовало
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Appointment with such id doesn\'t exist'
+        )
+    await session.commit()
+
+    result = await session.execute(
+        select(Appointment)
+        .where(Appointment.id == appointment_id)
+        .options(
+            joinedload(Appointment.customer),
+            joinedload(Appointment.offering).joinedload(Offering.master),
+            joinedload(Appointment.offering).joinedload(Offering.service),
+            joinedload(Appointment.slot)
+        )
+    )
+    return result.scalar_one()
