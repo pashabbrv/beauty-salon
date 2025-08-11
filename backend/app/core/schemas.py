@@ -1,9 +1,14 @@
 from datetime import datetime, time
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Annotated
+
+
+phone_str = Annotated[str, Field(min_length=2, max_length=20)]
+name_str = Annotated[str, Field(min_length=2, max_length=100)]
 
 
 class ServiceInfo(BaseModel):
-    name: str
+    name: name_str
 
 class ServiceDB(ServiceInfo):
     id: int
@@ -13,8 +18,8 @@ class ServiceDB(ServiceInfo):
 
 
 class MasterInfo(BaseModel):
-    phone: str
-    name: str
+    phone: phone_str
+    name: name_str
 
 class MasterDB(MasterInfo):
     id: int
@@ -45,15 +50,15 @@ class TimeSlot(BaseModel):
     end: datetime
 
 class AppointmentCreate(BaseModel):
-    name: str
-    phone: str
+    name: name_str
+    phone: phone_str
     offering_id: int
     datetime: datetime
 
 class AppointmentGet(BaseModel):
     id: int
-    name: str
-    phone: str
+    name: name_str
+    phone: phone_str
     offering: OfferingGet
     slot: TimeSlot
     confirmed: bool
@@ -65,11 +70,11 @@ class AppointmentGet(BaseModel):
 
 class CustomerGet(BaseModel):
     id: int
-    phone: str
-    name: str
-    status: str
+    phone: phone_str
+    name: name_str
+    status: Annotated[str, Field(max_length=10)]
     created_at: datetime
 
 
 class CustomersStatusUpdate(BaseModel):
-    status: str
+    status: Annotated[str, Field(max_length=10)]
