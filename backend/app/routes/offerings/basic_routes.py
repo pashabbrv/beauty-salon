@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, Body, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import aliased, joinedload
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
@@ -11,13 +11,10 @@ from db.postgresql import get_session
 from db.queries import select_one, insert_one
 
 
-offerings_router = APIRouter(prefix='/offerings')
-
-master_alias = aliased(Master, name="master")
-service_alias = aliased(Service, name="service")
+basic_router = APIRouter()
 
 
-@offerings_router.get('/', response_model=list[OfferingGet])
+@basic_router.get('/', response_model=list[OfferingGet])
 async def get_all_offerings(
     session: Annotated[AsyncSession, Depends(get_session)]
 ):
@@ -29,7 +26,7 @@ async def get_all_offerings(
     return result.scalars().all()
 
 
-@offerings_router.post(
+@basic_router.post(
     '/',
     response_model=OfferingGet,
     status_code=status.HTTP_201_CREATED
