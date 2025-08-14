@@ -70,6 +70,13 @@ async def create_new_appointment(
             ).returning(Customer)
         )
         customer = result.scalar_one()
+    else:
+        # Проверка, что пользователь не заблокирован
+        if customer.status == 'blocked':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='User with this phone number has been blocked'
+            )
     
     # 2. Поиск услуги мастера по id
     offering = await select_one(session, Offering, {'id': appointment.offering_id})
