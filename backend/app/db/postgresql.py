@@ -1,4 +1,5 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from . import POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_NAME
 from .models import Base
@@ -11,8 +12,18 @@ engine = create_async_engine(
     echo=True
 )
 
-session_factory = async_sessionmaker(engine)
+session_factory = async_sessionmaker(engine, class_=AsyncSession)
 
+
+async def get_session():
+    """Получение соединения с базой данных"""
+    async with session_factory() as session:
+        try:
+            yield session
+        except SQLAlchemyError as e:
+            await session.rollback()
+            raise e
+            
 
 async def create_tables():
     """Создание всех таблиц"""
