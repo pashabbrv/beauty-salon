@@ -1,10 +1,14 @@
 import os
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 INSTANCE_ID = os.getenv("GREENAPI_INSTANCE_ID")
 API_TOKEN = os.getenv("GREENAPI_API_TOKEN")
 
 BASE_URL = f"https://api.green-api.com/waInstance{INSTANCE_ID}"
+
 
 def send_whatsapp_message(chat_id: str, message: str):
     """

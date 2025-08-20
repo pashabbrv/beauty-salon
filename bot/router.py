@@ -3,8 +3,8 @@ from utils.export_excel import export_clients
 from utils.auth import is_admin
 
 def handle_message(user_id: str, text: str) -> str:
-    if not is_admin(user_id):
-        return "❌ Доступ запрещён. Вы не администратор."
+    # if not is_admin(user_id):
+    #     return "❌ Доступ запрещён. Вы не администратор."
 
     try:
         if text.startswith("/add_service"):
