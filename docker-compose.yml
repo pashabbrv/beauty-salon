@@ -6,4 +6,6 @@ services:
     container_name: whatsapp-bot
     env_file:
       - .env
-    restart: unless-stopped 
+    restart: unless-stopped
+    volumes:
+      - ./bot:/app
