@@ -1,0 +1,11 @@
+services:
+  whatsapp-bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: whatsapp-bot
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - ./bot:/app
