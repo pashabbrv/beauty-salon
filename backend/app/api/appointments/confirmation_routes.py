@@ -8,6 +8,7 @@ from core.schemas import OKModel, ConfirmationCode
 from db.models import Appointment
 from db.postgresql import get_session
 from db.queries import select_one
+from ws.appointments.notifications import ws_appointments_manager
 
 
 confirmation_router = APIRouter()
@@ -15,19 +16,33 @@ confirmation_router = APIRouter()
 
 @confirmation_router.post(
     '/{appointment_id}/refresh/',
-    response_model=ConfirmationCode
+    response_model=OKModel
 )
 async def refresh_confirmation_code(
     session: Annotated[AsyncSession, Depends(get_session)],
     appointment_id: Annotated[int, Path()]
 ):
-    result = await select_one(session, Appointment, {'id': appointment_id})
-    if result is None:
+    appointment = await select_one(session, Appointment, {'id': appointment_id})
+    if appointment is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='Appointment with such id doesn\'t exist'
         )
-    return {'confirmation_code': result.secret_code}
+    
+    result = await ws_appointments_manager.broadcast({
+        'message': 'confirmation',
+        'detail': {
+            'phone': appointment.phone,
+            'code': appointment.secret_code
+        }
+    })
+
+    if result:
+        return {'message': 'OK'}
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail='Cannot send code to notificating devices'
+    )
 
 
 @confirmation_router.post(

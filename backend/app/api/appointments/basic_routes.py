@@ -13,6 +13,7 @@ from core.schemas import AppointmentCreate, AppointmentGet
 from db.models import Offering, Customer, Appointment, Occupation
 from db.postgresql import get_session
 from db.queries import select_one
+from ws.appointments.notifications import ws_appointments_manager
 
 
 basic_router = APIRouter()
@@ -102,7 +103,6 @@ async def create_new_appointment(
     )
 
     # 4. Создаём запись в бд
-    secret_code = ''.join(str(secrets.randbelow(10)) for _ in range(5))
     result = await session.execute(
         insert(Appointment)
         .values(
@@ -110,7 +110,7 @@ async def create_new_appointment(
             customer_id=customer.id,
             offering_id=offering.id,
             occupation_id=occupation_result.scalar_one(),
-            secret_code=secret_code
+            secret_code=''.join(str(secrets.randbelow(10)) for _ in range(5))
         ).returning(Appointment)
         .options(
             joinedload(Appointment.customer),
@@ -124,6 +124,15 @@ async def create_new_appointment(
     # 5. Сохраняем изменения
     await session.commit()
     await session.refresh(new_appointment)
+
+    # 6. Отправляем уведомление с кодом подтверждения
+    result = await ws_appointments_manager.broadcast({
+        'message': 'confirmation',
+        'detail': {
+            'phone': new_appointment.phone,
+            'code': new_appointment.secret_code
+        }
+    })
     
     return new_appointment
 
