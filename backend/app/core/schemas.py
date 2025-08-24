@@ -84,7 +84,7 @@ class TimeSlot(BaseModel):
 
 
 class AppointmentCreate(BaseModel):
-    """Модель с основной информацией о записи
+    """Модель с основной информацией, используемой для создания записи
     \n_(по-умолчанию используется верификация **словаря**)_"""
     name: name_str
     phone: phone_str
@@ -93,7 +93,7 @@ class AppointmentCreate(BaseModel):
 
 
 class AppointmentGet(BaseModel):
-    """Модель со всей информацией о записи из базы данных
+    """Модель со всей информацией о записи (кроме кода подтверждения)
     \n_(по-умолчанию используется верификация **модели**)_"""
     id: int
     name: name_str
@@ -105,6 +105,12 @@ class AppointmentGet(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ConfirmationCode(BaseModel):
+    """Модель для взаимодействия с кодом подтверждения записи
+    \n_(по-умолчанию используется верификация **словаря**)_"""
+    confirmation_code: Annotated[str, Field(min_length=2, max_length=8)]
 
 
 class CustomerGet(BaseModel):
@@ -121,3 +127,8 @@ class CustomersStatusUpdate(BaseModel):
     """Модель для обновления статуса пользователя
     \n_(по-умолчанию используется верификация **словаря**)_"""
     status: Annotated[str, Field(max_length=10)]
+
+
+class OKModel(BaseModel):
+    """Модель ответа для {"message": "OK"}"""
+    message: Annotated[str, Field(default='OK')]
