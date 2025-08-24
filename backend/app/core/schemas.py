@@ -8,9 +8,14 @@ name_str = Annotated[str, Field(min_length=2, max_length=100)]
 
 
 class ServiceInfo(BaseModel):
+    """Модель с основной информацией об услуге
+    \n_(по-умолчанию используется верификация **словаря**)_"""
     name: name_str
 
+
 class ServiceDB(ServiceInfo):
+    """Модель со всей информацией об услуге из базы данных
+    \n_(по-умолчанию используется верификация **модели**)_"""
     id: int
 
     class Config:
@@ -18,10 +23,15 @@ class ServiceDB(ServiceInfo):
 
 
 class MasterInfo(BaseModel):
+    """Модель с основной информацией о мастере
+    \n_(по-умолчанию используется верификация **словаря**)_"""
     phone: phone_str
     name: name_str
 
+
 class MasterDB(MasterInfo):
+    """Модель со всей информацией о мастере из базы данных
+    \n_(по-умолчанию используется верификация **модели**)_"""
     id: int
 
     class Config:
@@ -29,12 +39,17 @@ class MasterDB(MasterInfo):
 
 
 class OfferingCreate(BaseModel):
+    """Модель с основной информацией, используемой для создания услуги мастера
+    \n_(по-умолчанию используется верификация **словаря**)_"""
     master_id: int
     service_id: int
     price: int
     duration: time
 
+
 class OfferingDBBase(BaseModel):
+    """Модель с базовой информацией об услуге мастера из базы данных
+    \n_(по-умолчанию используется верификация **модели**)_"""
     id: int
     price: int
     duration: time
@@ -42,27 +57,44 @@ class OfferingDBBase(BaseModel):
     class Config:
         from_attributes = True
 
+
 class OfferingGetMaster(OfferingDBBase):
+    """Модель с базовой информацией об услуге мастера и о самом мастере
+    \n_(по-умолчанию используется верификация **модели**)_"""
     master: MasterDB
 
+
 class OfferingGetService(OfferingDBBase):
+    """Модель с базовой информацией об услуге мастера и о самой услуге
+    \n_(по-умолчанию используется верификация **модели**)_"""
     service: ServiceDB
 
+
 class OfferingGet(OfferingGetMaster, OfferingGetService):
+    """Модель со всей информацией об услуге мастера (включая мастера и услугу)
+    \n_(по-умолчанию используется верификация **модели**)_"""
     pass
 
 
 class TimeSlot(BaseModel):
+    """Модель с информацией о временном слоте
+    \n_(по-умолчанию используется верификация **словаря**)_"""
     start: datetime
     end: datetime
 
+
 class AppointmentCreate(BaseModel):
+    """Модель с основной информацией о записи
+    \n_(по-умолчанию используется верификация **словаря**)_"""
     name: name_str
     phone: phone_str
     offering_id: int
     datetime: datetime
 
+
 class AppointmentGet(BaseModel):
+    """Модель со всей информацией о записи из базы данных
+    \n_(по-умолчанию используется верификация **модели**)_"""
     id: int
     name: name_str
     phone: phone_str
@@ -76,6 +108,8 @@ class AppointmentGet(BaseModel):
 
 
 class CustomerGet(BaseModel):
+    """Модель со всей информацией о пользователе из базы данных
+    \n_(по-умолчанию используется верификация **модели**)_"""
     id: int
     phone: phone_str
     name: name_str
@@ -84,4 +118,6 @@ class CustomerGet(BaseModel):
 
 
 class CustomersStatusUpdate(BaseModel):
+    """Модель для обновления статуса пользователя
+    \n_(по-умолчанию используется верификация **словаря**)_"""
     status: Annotated[str, Field(max_length=10)]
