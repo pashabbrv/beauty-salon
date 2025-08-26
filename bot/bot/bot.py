@@ -8,7 +8,9 @@ from dotenv import load_dotenv
 from .storage import init_db
 from .utils.auth import OWNER_ID, is_admin, is_owner
 from .router import handle_message
-from .utils.export import get_appointments, format_appointments_to_text
+from .utils.export import (
+    get_appointments, format_appointments_compact, get_customers, format_users_compact
+)
 
 
 print(f"[INFO] router loaded from: {handle_message.__module__}, OWNER_ID={OWNER_ID}")
@@ -23,9 +25,10 @@ BASE = f"https://api.green-api.com/waInstance{INSTANCE_ID}"
 HELP_TEXT = (
     "📋 Команды:\n"
     "/help — список команд\n"
-    "/add_admin 996xxxxxxxxx\n"
-    "/remove_admin 996xxxxxxxxx\n"
-    "/export — экспорт клиентской базы"
+    # "/add_admin 996xxxxxxxxx\n"
+    # "/remove_admin 996xxxxxxxxx\n"
+    "/export_appointments — экспорт базы записей\n"
+    "/export_users — экспорт клиентской базы"
 )
 def handle_message(user_id: str, text: str) -> str:
     print(user_id, text)
@@ -36,11 +39,16 @@ def handle_message(user_id: str, text: str) -> str:
         return ""  # пустая строка = не отвечаем
     if text.startswith("/help"):
         return HELP_TEXT
-    if text.startswith("/export"):
+    if text.startswith("/export_appointments"):
         result = get_appointments()
         if not result[0]:
             return "Произошла ошибка во время получения записей"
-        return format_appointments_to_text(result[1])
+        return format_appointments_compact(result[1])
+    if text.startswith("/export_users"):
+        result = get_customers()
+        if not result[0]:
+            return "Произошла ошибка во время получения записей"
+        return format_users_compact(result[1])
     return "🤖 Команда не распознана. Напиши /help"
 
 # ====== утилиты Green-API ======
