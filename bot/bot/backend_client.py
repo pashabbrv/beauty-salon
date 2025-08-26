@@ -6,17 +6,17 @@ from . import storage
 
 # --- Админы ---
 def add_admin(phone: str) -> bool:
-    phone = normalize_phone(phone)
+    phone = phone
     if not BACKEND_ENABLED:
         return storage.add_admin(phone)
     ...
 def remove_admin(phone: str) -> bool:
-    phone = normalize_phone(phone)
+    phone = phone
     if not BACKEND_ENABLED:
         return storage.remove_admin(phone)
     ...
 def is_admin(phone: str) -> bool:
-    phone = normalize_phone(phone)
+    phone = phone
     if not BACKEND_ENABLED:
         return storage.is_admin(phone)
 
@@ -29,7 +29,7 @@ def export_clients() -> str:
     """
     if not BACKEND_ENABLED:
         try:
-            from utils.export_excel import export_clients as local_export  # если есть
+            from bot.bot.utils.export import export_clients as local_export  # если есть
             return local_export()
         except Exception:
             return "⚠️ Локальный экспорт недоступен"

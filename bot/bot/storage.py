@@ -9,14 +9,14 @@ def _conn():
 
 def init_db():
     with _conn() as c:
-        c.execute("""CREATE TABLE IF NOT EXISTS admins (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone TEXT UNIQUE NOT NULL
-        )""")
-        c.execute("""CREATE TABLE IF NOT EXISTS processed_messages (
-            id TEXT PRIMARY KEY,
-            created_at INTEGER NOT NULL
-        )""")
+        # c.execute("""CREATE TABLE IF NOT EXISTS admins (
+        #     id INTEGER PRIMARY KEY AUTOINCREMENT,
+        #     phone TEXT UNIQUE NOT NULL
+        # )""")
+        # c.execute("""CREATE TABLE IF NOT EXISTS processed_messages (
+        #     id TEXT PRIMARY KEY,
+        #     created_at INTEGER NOT NULL
+        # )""")
         c.execute("""CREATE TABLE IF NOT EXISTS ratelimit (
             key TEXT PRIMARY KEY,
             count INTEGER NOT NULL,
