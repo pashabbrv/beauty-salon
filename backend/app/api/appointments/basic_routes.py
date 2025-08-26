@@ -1,8 +1,9 @@
+import secrets
 from datetime import date, timedelta
 from fastapi import (
     APIRouter, status, Body, Query, Path, Depends, HTTPException
 )
-from sqlalchemy import select, insert, update, delete
+from sqlalchemy import select, insert, delete
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -12,12 +13,13 @@ from core.schemas import AppointmentCreate, AppointmentGet
 from db.models import Offering, Customer, Appointment, Occupation
 from db.postgresql import get_session
 from db.queries import select_one
+from ws.appointments.notifications import ws_appointments_manager
 
 
-appointments_router = APIRouter(prefix='/appointments')
+basic_router = APIRouter()
 
 
-@appointments_router.get('/', response_model=list[AppointmentGet])
+@basic_router.get('/', response_model=list[AppointmentGet])
 async def get_appointments(
     _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -48,7 +50,7 @@ async def get_appointments(
     return result.scalars().all()
 
 
-@appointments_router.post(
+@basic_router.post(
     '/',
     response_model=AppointmentGet,
     status_code=status.HTTP_201_CREATED
@@ -107,7 +109,8 @@ async def create_new_appointment(
             name=appointment.name,
             customer_id=customer.id,
             offering_id=offering.id,
-            occupation_id=occupation_result.scalar_one()
+            occupation_id=occupation_result.scalar_one(),
+            secret_code=''.join(str(secrets.randbelow(10)) for _ in range(5))
         ).returning(Appointment)
         .options(
             joinedload(Appointment.customer),
@@ -121,11 +124,20 @@ async def create_new_appointment(
     # 5. Сохраняем изменения
     await session.commit()
     await session.refresh(new_appointment)
+
+    # 6. Отправляем уведомление с кодом подтверждения
+    result = await ws_appointments_manager.broadcast({
+        'message': 'confirmation',
+        'detail': {
+            'phone': new_appointment.phone,
+            'code': new_appointment.secret_code
+        }
+    })
     
     return new_appointment
 
 
-@appointments_router.delete(
+@basic_router.delete(
     '/{appointment_id}/',
     status_code=status.HTTP_204_NO_CONTENT
 )
@@ -146,39 +158,3 @@ async def delete_appointment(
         )
     await session.commit()
     return None
-
-
-@appointments_router.post(
-    '/{appointment_id}/confirm/',
-    response_model=AppointmentGet
-)
-async def confirm_appointment(
-    _: Annotated[None, Depends(verify_token)], # Верификация по токену
-    session: Annotated[AsyncSession, Depends(get_session)],
-    appointment_id: Annotated[int, Path()]
-):
-    """Подтверждение записи по её id"""
-    result = await session.execute(
-        update(Appointment)
-        .values(confirmed=True)
-        .where(Appointment.id == appointment_id)
-    )
-    # Если записей с таким id не существовало
-    if result.rowcount == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Appointment with such id doesn\'t exist'
-        )
-    await session.commit()
-
-    result = await session.execute(
-        select(Appointment)
-        .where(Appointment.id == appointment_id)
-        .options(
-            joinedload(Appointment.customer),
-            joinedload(Appointment.offering).joinedload(Offering.master),
-            joinedload(Appointment.offering).joinedload(Offering.service),
-            joinedload(Appointment.slot)
-        )
-    )
-    return result.scalar_one()

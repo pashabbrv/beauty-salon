@@ -98,6 +98,8 @@ class Appointment(Base):
         ForeignKey('occupations.id', ondelete='SET NULL')
     )
     confirmed: Mapped[bool] = mapped_column(default=False)
+    secret_code: Mapped[str] = mapped_column(String(8))
+    attempts: Mapped[int] = mapped_column(default=5)
     created_at: Mapped[creation_time]
 
     # Отношения с другими ORM
