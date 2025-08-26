@@ -6,9 +6,9 @@ import unicodedata
 import requests
 from dotenv import load_dotenv
 from .storage import init_db
-from .utils.auth import OWNER_ID
+from .utils.auth import OWNER_ID, is_admin, is_owner
 from .router import handle_message
-from .utils.auth import is_admin, is_owner
+from .utils.export import get_appointments, format_appointments_to_text
 
 
 print(f"[INFO] router loaded from: {handle_message.__module__}, OWNER_ID={OWNER_ID}")
@@ -37,7 +37,10 @@ def handle_message(user_id: str, text: str) -> str:
     if text.startswith("/help"):
         return HELP_TEXT
     if text.startswith("/export"):
-        return "Экспорт"
+        result = get_appointments()
+        if not result[0]:
+            return "Произошла ошибка во время получения записей"
+        return format_appointments_to_text(result[1])
     return "🤖 Команда не распознана. Напиши /help"
 
 # ====== утилиты Green-API ======
