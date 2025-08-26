@@ -5,11 +5,11 @@ import json
 import unicodedata
 import requests
 from dotenv import load_dotenv
-from bot.router import handle_message
 from .storage import init_db
 from .utils.auth import OWNER_ID
 from .router import handle_message
-# from .greenapi import receive_messages, send_whatsapp_message
+from .utils.auth import is_admin, is_owner
+
 
 print(f"[INFO] router loaded from: {handle_message.__module__}, OWNER_ID={OWNER_ID}")
 
@@ -23,16 +23,21 @@ BASE = f"https://api.green-api.com/waInstance{INSTANCE_ID}"
 HELP_TEXT = (
     "📋 Команды:\n"
     "/help — список команд\n"
-    "/add_admin <номер>\n"
-    "/remove_admin <номер>\n"
+    "/add_admin 996xxxxxxxxx\n"
+    "/remove_admin 996xxxxxxxxx\n"
     "/export — экспорт клиентской базы"
 )
 def handle_message(user_id: str, text: str) -> str:
+    print(user_id, text)
+    if not is_owner(user_id):
+        return "" 
     # отвечаем только на команды
     if not text.startswith("/"):
         return ""  # пустая строка = не отвечаем
     if text.startswith("/help"):
         return HELP_TEXT
+    if text.startswith("/export"):
+        return "Экспорт"
     return "🤖 Команда не распознана. Напиши /help"
 
 # ====== утилиты Green-API ======
@@ -115,7 +120,7 @@ def _msg_key(body: dict) -> str:
     return md.get("stanzaId") or md.get("idMessage") or str(body.get("timestamp") or "")  # fallback
 
 # ====== основной цикл ======
-# init_db()
+init_db()
 def poll_loop():
     if not INSTANCE_ID or not API_TOKEN:
         raise RuntimeError("GREENAPI_INSTANCE_ID / GREENAPI_API_TOKEN не заданы в .env")

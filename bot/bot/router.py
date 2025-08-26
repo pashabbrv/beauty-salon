@@ -24,7 +24,7 @@ def handle_message(user_id: str, text: str) -> str:
         parts = text.split()
         if len(parts) != 2:
             return "Использование: /add_admin 79XXXXXXXXX"
-        phone = normalize_phone(parts[1])
+        phone = parts[1]
         if not phone:
             return "❌ Некорректный номер."
         return "✅ Добавлен" if add_admin(phone) else "❌ Не удалось добавить"
@@ -35,7 +35,7 @@ def handle_message(user_id: str, text: str) -> str:
         parts = text.split()
         if len(parts) != 2:
             return "Использование: /remove_admin 79XXXXXXXXX"
-        phone = normalize_phone(parts[1])
+        phone = parts[1]
         if not phone:
             return "❌ Некорректный номер."
         return "✅ Удалён" if remove_admin(phone) else "❌ Не удалось удалить"
