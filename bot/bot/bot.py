@@ -1,11 +1,14 @@
 # bot.py
+import asyncio
 import os
 import time
 import json
+import threading
 import unicodedata
 import requests
 from dotenv import load_dotenv
 from .utils.auth import OWNER_ID, is_owner
+from .utils.notifications import ServerNotifications
 from .commands.export_appointments import get_appointments, format_appointments_compact
 from .commands.export_users import get_customers, format_customers_compact
 
@@ -185,10 +188,26 @@ def poll_loop():
 
 
 # ====== уведомления с сервера ======
+notificator = ServerNotifications(_send_text)
 
 
 if __name__ == "__main__":
-    poll_loop()
+    # Функция для запуска асинхронного слушателя в отдельном потоке
+    def run_websocket_listener():
+        asyncio.run(notificator.notifications_listener())
+    
+    # Запускаем WebSocket слушатель в отдельном потоке
+    websocket_thread = threading.Thread(target=run_websocket_listener, daemon=True)
+    websocket_thread.start()
+    print("[INFO] WebSocket слушатель запущен в отдельном потоке")
+    
+    # Запускаем основной цикл в главном потоке
+    try:
+        poll_loop()
+    except KeyboardInterrupt:
+        print("\n[INFO] Остановка бота...")
+    except Exception as e:
+        print(f"[ERROR] Критическая ошибка: {e}")
 
 # Реализуешь REST эндпоинты на бекенде:
 

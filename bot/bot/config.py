@@ -9,6 +9,9 @@ OWNER_ID = (os.getenv("OWNER_ID") or "").strip()
 
 BACKEND_ENABLED = os.getenv("BACKEND_ENABLED", "0") == "1"
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:8000").rstrip("/")
+BACKEND_WS_URL = os.getenv("BACKEND_WS_URL", "ws://localhost:8000").rstrip("/")
+
+AUTH_BACKEND_TOKEN = os.getenv("BACKEND_TOKEN")
 
 # rate limit
 RL_WINDOW_SEC = int(os.getenv("RL_WINDOW_SEC", "10"))
