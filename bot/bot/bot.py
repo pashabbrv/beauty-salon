@@ -5,21 +5,19 @@ import json
 import unicodedata
 import requests
 from dotenv import load_dotenv
-from .storage import init_db
-from .utils.auth import OWNER_ID, is_admin, is_owner
-from .router import handle_message
-from .utils.export import (
-    get_appointments, format_appointments_compact, get_customers, format_users_compact
-)
+from .utils.auth import OWNER_ID, is_owner
+from .commands.export_appointments import get_appointments, format_appointments_compact
+from .commands.export_users import get_customers, format_customers_compact
 
 
-print(f"[INFO] router loaded from: {handle_message.__module__}, OWNER_ID={OWNER_ID}")
+print(f"[INFO] OWNER_ID={OWNER_ID}")
 
 load_dotenv()
 INSTANCE_ID = os.getenv("GREENAPI_INSTANCE_ID")
 API_TOKEN   = os.getenv("GREENAPI_API_TOKEN")
 
 BASE = f"https://api.green-api.com/waInstance{INSTANCE_ID}"
+
 
 # ====== простейший роутер (если у тебя свой router.py — подключи его здесь) ======
 HELP_TEXT = (
@@ -48,8 +46,9 @@ def handle_message(user_id: str, text: str) -> str:
         result = get_customers()
         if not result[0]:
             return "Произошла ошибка во время получения записей"
-        return format_users_compact(result[1])
+        return format_customers_compact(result[1])
     return "🤖 Команда не распознана. Напиши /help"
+
 
 # ====== утилиты Green-API ======
 def _receive_one():
@@ -65,6 +64,7 @@ def _receive_one():
         print(f"[ERROR] ReceiveNotification: {e}")
         return None
 
+
 def _delete_notification(receipt_id):
     if receipt_id is None:
         return
@@ -75,6 +75,7 @@ def _delete_notification(receipt_id):
         print(f"[DEBUG] DeleteNotification {receipt_id} OK")
     except requests.RequestException as e:
         print(f"[WARN] DeleteNotification {receipt_id} failed: {e}")
+
 
 def _send_text(chat_id_or_phone: str, text: str):
     if not text:
@@ -91,6 +92,7 @@ def _send_text(chat_id_or_phone: str, text: str):
         print(f"[DEBUG] Sent → {chat_id_or_phone}: {text}")
     except requests.RequestException as e:
         print(f"[ERROR] sendMessage: {e}")
+
 
 # ====== парсинг ======
 def _extract_text(message_data: dict) -> str | None:
@@ -123,6 +125,7 @@ def _extract_text(message_data: dict) -> str | None:
 
     return s
 
+
 # ====== дедуп (в памяти) ======
 PROCESSED = set()
 def _msg_key(body: dict) -> str:
@@ -130,8 +133,8 @@ def _msg_key(body: dict) -> str:
     # старайся использовать stanzaId; если его нет, idMessage; иначе receiptId
     return md.get("stanzaId") or md.get("idMessage") or str(body.get("timestamp") or "")  # fallback
 
+
 # ====== основной цикл ======
-init_db()
 def poll_loop():
     if not INSTANCE_ID or not API_TOKEN:
         raise RuntimeError("GREENAPI_INSTANCE_ID / GREENAPI_API_TOKEN не заданы в .env")
@@ -179,6 +182,10 @@ def poll_loop():
             print(f"[ERROR] Обработка: {e}")
         finally:
             _delete_notification(receipt_id)
+
+
+# ====== уведомления с сервера ======
+
 
 if __name__ == "__main__":
     poll_loop()
