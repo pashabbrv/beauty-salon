@@ -22,6 +22,7 @@ async def refresh_confirmation_code(
     session: Annotated[AsyncSession, Depends(get_session)],
     appointment_id: Annotated[int, Path()]
 ):
+    """Получение кода для подтверждения записи"""
     appointment = await select_one(session, Appointment, {'id': appointment_id})
     if appointment is None:
         raise HTTPException(
@@ -49,11 +50,12 @@ async def refresh_confirmation_code(
     '/{appointment_id}/confirm/',
     response_model=OKModel
 )
-async def refresh_confirmation_code(
+async def confirm_appointment_using_code(
     session: Annotated[AsyncSession, Depends(get_session)],
     appointment_id: Annotated[int, Path()],
     confirmation_code: Annotated[ConfirmationCode, Body()]
 ):
+    """Подтверждение записи по её id с использованием кода"""
     appointment = await select_one(session, Appointment, {'id': appointment_id})
     if appointment is None:
         raise HTTPException(
@@ -91,7 +93,7 @@ async def refresh_confirmation_code(
     '/{appointment_id}/admin_confirm/',
     response_model=OKModel
 )
-async def confirm_appointment(
+async def confirm_appointment_as_admin(
     _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     appointment_id: Annotated[int, Path()]
