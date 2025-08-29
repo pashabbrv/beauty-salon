@@ -12,9 +12,12 @@ from db.queries import select_all, select_one
 customers_router = APIRouter(prefix='/customers')
 
 
-@customers_router.get('/', response_model=list[CustomerGet])
+@customers_router.get(
+    '/',
+    response_model=list[CustomerGet],
+    dependencies=[Depends(verify_token)]
+)
 async def get_customers(
-    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)]
 ):
     """Получение всех клиентов, записывавшихся когда-либо"""
@@ -22,9 +25,12 @@ async def get_customers(
     return customers
 
 
-@customers_router.patch('/{phone}/status/', response_model=CustomerGet)
+@customers_router.patch(
+    '/{phone}/status/',
+    response_model=CustomerGet,
+    dependencies=[Depends(verify_token)]
+)
 async def change_customers_status(
-    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     phone: Annotated[str, Path()],
     new_status: Annotated[CustomersStatusUpdate, Body()]

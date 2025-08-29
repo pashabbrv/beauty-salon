@@ -1,4 +1,4 @@
-from fastapi import Header, HTTPException, status, WebSocket
+from fastapi import Header, HTTPException, status
 from typing import Annotated
 from dotenv import load_dotenv
 from os import getenv
@@ -9,7 +9,9 @@ BACKEND_TOKEN = getenv('BACKEND_TOKEN', None)
 
 
 async def verify_token(
-    auth_token: Annotated[str | None, Header(alias='Auth-Token')] = None
+    auth_token: Annotated[str | None, Header(
+        alias='Auth-Token', description='Токен аутентификации'
+    )] = None
 ):
     """Проверка токена аутентификации для доступа к эндпоинту"""
     if auth_token != BACKEND_TOKEN:
@@ -20,7 +22,9 @@ async def verify_token(
 
 
 async def verify_token_bool(
-    auth_token: Annotated[str | None, Header(alias='Auth-Token')] = None
+    auth_token: Annotated[str | None, Header(
+        alias='Auth-Token', description='Токен аутентификации'
+    )] = None
 ):
     """Проверка токен аутентификации для доступа к вебсокету"""
     return auth_token == BACKEND_TOKEN

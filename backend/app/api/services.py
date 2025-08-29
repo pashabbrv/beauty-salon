@@ -24,10 +24,10 @@ async def get_all_services(
 @services_router.post(
     '/',
     response_model=ServiceDB,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(verify_token)]
 )
 async def add_new_service(
-    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     service: Annotated[ServiceInfo, Body()]
 ):

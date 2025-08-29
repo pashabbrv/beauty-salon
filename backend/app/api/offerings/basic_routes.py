@@ -40,10 +40,10 @@ async def get_all_offerings(
 @basic_router.post(
     '/',
     response_model=OfferingGet,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(verify_token)]
 )
 async def create_new_offering(
-    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     offering: Annotated[OfferingCreate, Body()]
 ):

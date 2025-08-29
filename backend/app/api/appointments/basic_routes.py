@@ -20,9 +20,12 @@ from ws.appointments.notifications import ws_appointments_manager
 basic_router = APIRouter()
 
 
-@basic_router.get('/', response_model=list[AppointmentGet])
+@basic_router.get(
+    '/',
+    response_model=list[AppointmentGet],
+    dependencies=[Depends(verify_token)]
+)
 async def get_appointments(
-    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     date: Annotated[date | None, Query()] = None,
     confirmed: Annotated[bool | None, Query()] = None
@@ -167,10 +170,10 @@ async def create_new_appointment(
 
 @basic_router.delete(
     '/{appointment_id}/',
-    status_code=status.HTTP_204_NO_CONTENT
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(verify_token)]
 )
 async def delete_appointment(
-    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     appointment_id: Annotated[int, Path()]
 ):

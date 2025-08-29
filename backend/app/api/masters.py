@@ -24,10 +24,10 @@ async def get_all_masters(
 @masters_router.post(
     '/',
     response_model=MasterDB,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(verify_token)]
 )
 async def add_new_master(
-    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     master: Annotated[MasterInfo, Body()]
 ):
