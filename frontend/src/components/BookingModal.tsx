@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Star, CheckCircle, ArrowLeft, ArrowRight, Phone } from "lucide-react";
+import { Calendar, Clock, User, Star, CheckCircle, ArrowLeft, ArrowRight, Phone, Loader2 } from "lucide-react";
+import { useBooking } from "@/hooks/useBooking";
+import ConfirmationModal from "@/components/ConfirmationModal";
 import { useToast } from "@/hooks/use-toast";
 
 interface BookingModalProps {
@@ -14,133 +16,131 @@ interface BookingModalProps {
 }
 
 const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [clientName, setClientName] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
-  const [selectedService, setSelectedService] = useState<any>(null);
-  const [selectedMaster, setSelectedMaster] = useState<any>(null);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const { toast } = useToast();
+  
+  const {
+    // Состояние
+    clientName,
+    clientPhone,
+    services,
+    selectedService,
+    offerings,
+    selectedOffering,
+    availableSlots,
+    selectedSlot,
+    loading,
+    error,
+    currentStep,
+    createdAppointment,
+    
+    // Действия
+    updateContactInfo,
+    loadServices,
+    selectService,
+    loadOfferings,
+    selectOffering,
+    loadTimeSlots,
+    selectTimeSlot,
+    createAppointment,
+    confirmAppointment,
+    refreshConfirmationCode,
+    
+    // Навигация
+    nextStep,
+    prevStep,
+    isStepValid,
+    resetBooking,
+  } = useBooking();
 
-  const services = [
-    {
-      id: 1,
-      name: "Классический маникюр",
-      price: "2500 сом",
-      duration: "1.5 часа",
-      category: "Маникюр",
-    },
-    {
-      id: 2,
-      name: "Стрижка + укладка",
-      price: "3000 сом",
-      duration: "2 часа",
-      category: "Волосы",
-    },
-    {
-      id: 3,
-      name: "Окрашивание волос",
-      price: "5000 сом",
-      duration: "3 часа",
-      category: "Волосы",
-    },
-    {
-      id: 4,
-      name: "Педикюр SPA",
-      price: "3500 сом",
-      duration: "1.5 часа",
-      category: "Педикюр",
-    },
-    {
-      id: 5,
-      name: "Макияж",
-      price: "2000 сом",
-      duration: "1 час",
-      category: "Красота",
-    },
-    {
-      id: 6,
-      name: "Наращивание ресниц",
-      price: "4000 сом",
-      duration: "2 часа",
-      category: "Красота",
+  // Загрузка услуг при открытии модала
+  useEffect(() => {
+    if (isOpen && currentStep === 1 && services.length === 0) {
+      loadServices();
     }
-  ];
+  }, [isOpen, currentStep, services.length, loadServices]);
 
-  const masters = [
-    {
-      id: 1,
-      name: "Анна Петрова",
-      specialization: "Топ-стилист",
-      rating: 4.9,
-      services: ["Стрижка + укладка", "Окрашивание волос"],
-      avatar: "/lovable-uploads/2734627b-407b-493f-acaf-78dcb3a69db3.png"
-    },
-    {
-      id: 2,
-      name: "Мария Иванова",
-      specialization: "Мастер маникюра",
-      rating: 4.8,
-      services: ["Классический маникюр", "Педикюр SPA"],
-      avatar: "/lovable-uploads/e55fa9a4-f93f-46f1-a3ef-3ad70b67864c.png"
-    },
-    {
-      id: 3,
-      name: "Елена Смирнова",
-      specialization: "Визажист",
-      rating: 4.9,
-      services: ["Макияж", "Наращивание ресниц"],
-      avatar: "/lovable-uploads/3a7e4b26-a301-4446-81f5-e610ffe7bcb8.png"
+  // Загрузка офферингов при выборе услуги
+  useEffect(() => {
+    if (selectedService && currentStep === 2) {
+      loadOfferings(selectedService.id);
     }
-  ];
+  }, [selectedService, currentStep, loadOfferings]);
 
-  const timeSlots = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "14:00", "14:30", "15:00", "15:30",
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00"
-  ];
+  // Загрузка слотов времени при выборе оффера
+  useEffect(() => {
+    if (selectedOffering && currentStep === 3) {
+      loadTimeSlots(selectedOffering.id);
+    }
+  }, [selectedOffering, currentStep, loadTimeSlots]);
 
-  const getAvailableMasters = () => {
-    if (!selectedService) return masters;
-    return masters.filter(master => 
-      master.services.includes(selectedService.name)
-    );
+  // Форматирование длительности из HH:MM:SS в читаемый вид
+  const formatDuration = (duration: string) => {
+    const [hours, minutes] = duration.split(':');
+    const h = parseInt(hours);
+    const m = parseInt(minutes);
+    
+    if (h > 0 && m > 0) {
+      return `${h} ч ${m} мин`;
+    } else if (h > 0) {
+      return `${h} ч`;
+    } else {
+      return `${m} мин`;
+    }
   };
 
-  const handleConfirmBooking = () => {
-    toast({
-      title: "Запись подтверждена!",
-      description: `${clientName}, мы свяжемся с вами по номеру ${clientPhone} для подтверждения записи на ${selectedService.name}.`,
+  // Форматирование времени из ISO строки
+  const formatSlotTime = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('ru-RU', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'UTC'
     });
-    onClose();
-    // Reset form
-    setCurrentStep(0);
-    setClientName("");
-    setClientPhone("");
-    setSelectedService(null);
-    setSelectedMaster(null);
-    setSelectedDate('');
-    setSelectedTime('');
   };
 
-  const nextStep = () => {
-    if (currentStep < 4) setCurrentStep(currentStep + 1);
+  // Форматирование даты из ISO строки
+  const formatSlotDate = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('ru-RU', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      timeZone: 'UTC'
+    });
   };
 
-  const prevStep = () => {
-    if (currentStep > 0) setCurrentStep(currentStep - 1);
-  };
-
-  const isStepValid = () => {
-    switch (currentStep) {
-      case 0: return clientName.trim() !== '' && clientPhone.trim() !== '';
-      case 1: return selectedService !== null;
-      case 2: return selectedMaster !== null;
-      case 3: return selectedDate !== '' && selectedTime !== '';
-      case 4: return true;
-      default: return false;
+  const handleConfirmBooking = async () => {
+    const appointment = await createAppointment();
+    if (appointment) {
+      setShowConfirmation(true);
     }
+  };
+
+  const handleConfirmationClose = () => {
+    setShowConfirmation(false);
+    onClose();
+    resetBooking();
+  };
+
+  const handleNameChange = (value: string) => {
+    updateContactInfo(value, clientPhone);
+  };
+
+  const handlePhoneChange = (value: string) => {
+    updateContactInfo(clientName, value);
+  };
+
+  const handleServiceSelect = (service: any) => {
+    selectService(service);
+  };
+
+  const handleOfferingSelect = (offering: any) => {
+    selectOffering(offering);
+  };
+
+  const handleSlotSelect = (slot: string) => {
+    selectTimeSlot(slot);
   };
 
   return (
@@ -186,31 +186,41 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-sm font-medium flex items-center">
                     <User className="w-4 h-4 mr-2 text-primary" />
-                    Ваше имя
+                    Ваше имя (2-100 символов)
                   </Label>
                   <Input
                     id="name"
                     type="text"
                     placeholder="Введите ваше имя"
                     value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     className="border-primary/20 focus:border-primary"
+                    minLength={2}
+                    maxLength={100}
                   />
+                  {clientName.length > 0 && (clientName.length < 2 || clientName.length > 100) && (
+                    <p className="text-sm text-red-500">Имя должно содержать от 2 до 100 символов</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="text-sm font-medium flex items-center">
                     <Phone className="w-4 h-4 mr-2 text-primary" />
-                    Номер телефона
+                    Номер телефона (2-20 символов)
                   </Label>
                   <Input
                     id="phone"
                     type="tel"
                     placeholder="+996 (___) ___-___"
                     value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
                     className="border-primary/20 focus:border-primary"
+                    minLength={2}
+                    maxLength={20}
                   />
+                  {clientPhone.length > 0 && (clientPhone.length < 2 || clientPhone.length > 20) && (
+                    <p className="text-sm text-red-500">Номер телефона должен содержать от 2 до 20 символов</p>
+                  )}
                 </div>
 
                 <div className="text-sm text-muted-foreground bg-blush/20 p-3 rounded-lg">
@@ -224,35 +234,36 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
           {currentStep === 1 && (
             <div>
               <h3 className="text-lg font-semibold mb-4">Выберите услугу</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                {services.map((service) => (
-                  <Card 
-                    key={service.id}
-                    className={`cursor-pointer transition-all duration-300 hover:shadow-soft ${
-                      selectedService?.id === service.id 
-                        ? 'border-primary bg-blush/30' 
-                        : 'border-primary/10'
-                    }`}
-                    onClick={() => setSelectedService(service)}
-                  >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{service.name}</CardTitle>
-                      <Badge variant="secondary" className="w-fit">
-                        {service.category}
-                      </Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          <span>{service.duration}</span>
+              
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <span className="ml-2">Загрузка услуг...</span>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {services.map((service) => (
+                    <Card 
+                      key={service.id}
+                      className={`cursor-pointer transition-all duration-300 hover:shadow-soft ${
+                        selectedService?.id === service.id 
+                          ? 'border-primary bg-blush/30' 
+                          : 'border-primary/10'
+                      }`}
+                      onClick={() => handleServiceSelect(service)}
+                    >
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">{service.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-sm text-muted-foreground">
+                          Выберите эту услугу для просмотра доступных мастеров
                         </div>
-                        <div className="font-semibold text-primary">{service.price}</div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -260,97 +271,127 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
           {currentStep === 2 && (
             <div>
               <h3 className="text-lg font-semibold mb-4">Выберите мастера</h3>
-              <div className="space-y-4">
-                {getAvailableMasters().map((master) => (
-                  <Card 
-                    key={master.id}
-                    className={`cursor-pointer transition-all duration-300 hover:shadow-soft ${
-                      selectedMaster?.id === master.id 
-                        ? 'border-primary bg-blush/30' 
-                        : 'border-primary/10'
-                    }`}
-                    onClick={() => setSelectedMaster(master)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-4">
-                        <img 
-                          src={master.avatar} 
-                          alt={master.name}
-                          className="w-16 h-16 rounded-full object-cover border-2 border-rose-gold/30"
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-semibold">{master.name}</h4>
-                          <p className="text-muted-foreground text-sm">{master.specialization}</p>
-                          <div className="flex items-center space-x-1 mt-1">
-                            <Star className="w-4 h-4 fill-accent text-accent" />
-                            <span className="text-sm font-medium">{master.rating}</span>
+              
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <span className="ml-2">Загрузка мастеров...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {offerings.map((offering) => (
+                    <Card 
+                      key={offering.id}
+                      className={`cursor-pointer transition-all duration-300 hover:shadow-soft ${
+                        selectedOffering?.id === offering.id 
+                          ? 'border-primary bg-blush/30' 
+                          : 'border-primary/10'
+                      }`}
+                      onClick={() => handleOfferingSelect(offering)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold text-lg">
+                            {offering.master.name.split(' ').map(n => n[0]).join('')}
                           </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{offering.master.name}</h4>
+                            <p className="text-muted-foreground text-sm">{offering.master.specialization || 'Мастер'}</p>
+                            <div className="flex items-center space-x-4 mt-2">
+                              <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                                <Clock className="w-4 h-4" />
+                                <span>{formatDuration(offering.duration)}</span>
+                              </div>
+                              <div className="font-semibold text-primary">{offering.price} сом</div>
+                            </div>
+                            {offering.master.rating && (
+                              <div className="flex items-center space-x-1 mt-1">
+                                <Star className="w-4 h-4 fill-accent text-accent" />
+                                <span className="text-sm font-medium">{offering.master.rating}</span>
+                              </div>
+                            )}
+                          </div>
+                          <User className="w-5 h-5 text-primary" />
                         </div>
-                        <User className="w-5 h-5 text-primary" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {offerings.length === 0 && !loading && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Мастера для данной услуги не найдены</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {/* Step 3: Select Date & Time */}
           {currentStep === 3 && (
             <div>
-              <h3 className="text-lg font-semibold mb-4">Выберите дату и время</h3>
+              <h3 className="text-lg font-semibold mb-4">Выберите время</h3>
               
-              {/* Date Selection */}
-              <div className="mb-6">
-                <h4 className="font-medium mb-3 text-sm sm:text-base">Дата:</h4>
-                <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                  {Array.from({ length: 14 }, (_, i) => {
-                    const date = new Date();
-                    date.setDate(date.getDate() + i);
-                    const dateStr = date.toISOString().split('T')[0];
-                    const isSelected = selectedDate === dateStr;
-                    
-                    return (
-                      <Button
-                        key={dateStr}
-                        variant={isSelected ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedDate(dateStr)}
-                        className={`h-12 flex flex-col ${
-                          isSelected ? 'bg-primary' : 'hover:bg-blush'
-                        }`}
-                      >
-                        <span className="text-xs">
-                          {date.toLocaleDateString('ru-RU', { weekday: 'short' })}
-                        </span>
-                        <span className="font-semibold">
-                          {date.getDate()}
-                        </span>
-                      </Button>
-                    );
-                  })}
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <span className="ml-2">Загрузка доступного времени...</span>
                 </div>
-              </div>
-
-              {/* Time Selection */}
-              {selectedDate && (
+              ) : (
                 <div>
-                  <h4 className="font-medium mb-3">Время:</h4>
-                  <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
-                    {timeSlots.map((time) => (
-                      <Button
-                        key={time}
-                        variant={selectedTime === time ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setSelectedTime(time)}
-                        className={`h-8 sm:h-10 text-xs sm:text-sm ${
-                          selectedTime === time ? 'bg-primary' : 'hover:bg-blush'
-                        }`}
-                      >
-                        {time}
-                      </Button>
-                    ))}
-                  </div>
+                  <h4 className="font-medium mb-3">Доступное время:</h4>
+                  
+                  {availableSlots.length > 0 ? (
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                      {availableSlots.map((slot) => {
+                        const isSelected = selectedSlot === slot;
+                        const slotDate = formatSlotDate(slot);
+                        const slotTime = formatSlotTime(slot);
+                        
+                        return (
+                          <Button
+                            key={slot}
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleSlotSelect(slot)}
+                            className={`h-16 flex flex-col ${
+                              isSelected ? 'bg-primary' : 'hover:bg-blush'
+                            }`}
+                          >
+                            <span className="text-xs opacity-80">
+                              {slotDate}
+                            </span>
+                            <span className="font-semibold">
+                              {slotTime}
+                            </span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>На ближайшее время нет доступных слотов</p>
+                      <p className="text-sm">Попробуйте выбрать другого мастера</p>
+                    </div>
+                  )}
+                  
+                  {selectedSlot && (
+                    <div className="mt-4 p-3 bg-blush/20 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Выбранное время:</p>
+                      <p className="font-semibold">
+                        {new Date(selectedSlot).toLocaleDateString('ru-RU', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'UTC'
+                        })}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -376,30 +417,29 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">Мастер:</span>
-                    <span className="font-semibold text-sm sm:text-base">{selectedMaster?.name}</span>
+                    <span className="font-semibold text-sm sm:text-base">{selectedOffering?.master.name}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">Дата:</span>
+                    <span className="text-muted-foreground text-sm">Время:</span>
                     <span className="font-semibold text-sm sm:text-base">
-                      {new Date(selectedDate).toLocaleDateString('ru-RU', {
+                      {selectedSlot && new Date(selectedSlot).toLocaleDateString('ru-RU', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
-                        day: 'numeric'
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'UTC'
                       })}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">Время:</span>
-                    <span className="font-semibold text-sm sm:text-base">{selectedTime}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">Длительность:</span>
-                    <span className="font-semibold text-sm sm:text-base">{selectedService?.duration}</span>
+                    <span className="font-semibold text-sm sm:text-base">{selectedOffering && formatDuration(selectedOffering.duration)}</span>
                   </div>
                   <div className="flex items-center justify-between border-t pt-3 sm:pt-4">
                     <span className="text-base sm:text-lg font-semibold">Стоимость:</span>
-                    <span className="text-lg sm:text-xl font-bold text-primary">{selectedService?.price}</span>
+                    <span className="text-lg sm:text-xl font-bold text-primary">{selectedOffering?.price} сом</span>
                   </div>
                 </CardContent>
               </Card>
@@ -412,7 +452,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
           <Button
             variant="outline"
             onClick={prevStep}
-            disabled={currentStep === 0}
+            disabled={currentStep === 0 || loading}
             className="border-primary/20 w-full sm:w-auto order-2 sm:order-1"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -422,23 +462,52 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
           {currentStep < 4 ? (
             <Button
               onClick={nextStep}
-              disabled={!isStepValid()}
+              disabled={!isStepValid() || loading}
               className="bg-gradient-primary w-full sm:w-auto order-1 sm:order-2"
             >
-              Далее
-              <ArrowRight className="w-4 h-4 ml-2" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Загрузка...
+                </>
+              ) : (
+                <>
+                  Далее
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
             </Button>
           ) : (
             <Button
               onClick={handleConfirmBooking}
+              disabled={loading}
               className="bg-gradient-primary w-full sm:w-auto order-1 sm:order-2"
             >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Подтвердить запись
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Создание...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Подтвердить запись
+                </>
+              )}
             </Button>
           )}
         </div>
       </DialogContent>
+      
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmation}
+        onClose={handleConfirmationClose}
+        appointment={createdAppointment}
+        onConfirm={confirmAppointment}
+        onRefreshCode={refreshConfirmationCode}
+        loading={loading}
+      />
     </Dialog>
   );
 };

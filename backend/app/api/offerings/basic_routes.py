@@ -4,11 +4,11 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from core.auth import verify_token
-from core.schemas import OfferingCreate, OfferingGet, MasterDB, ServiceDB
-from db.models import Offering, Master, Service
-from db.postgresql import get_session
-from db.queries import select_one, insert_one
+from app.core.auth import verify_token
+from app.core.schemas import OfferingCreate, OfferingGet, MasterDB, ServiceDB
+from app.db.models import Offering, Master, Service
+from app.db.postgresql import get_session
+from app.db.queries import select_one, insert_one
 
 
 basic_router = APIRouter()

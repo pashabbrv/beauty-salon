@@ -4,9 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from db.models import Offering, Occupation
-from db.postgresql import get_session
-from db.queries import select_one
+from app.db.models import Offering, Occupation
+from app.db.postgresql import get_session
+from app.db.queries import select_one
 from .utils import generate_time_slots_for_now, filter_busy_slots
 
 

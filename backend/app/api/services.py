@@ -2,11 +2,11 @@ from fastapi import APIRouter, status, Body, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from core.auth import verify_token
-from core.schemas import ServiceInfo, ServiceDB
-from db.models import Service
-from db.postgresql import get_session
-from db.queries import select_all, insert_one
+from app.core.auth import verify_token
+from app.core.schemas import ServiceInfo, ServiceDB
+from app.db.models import Service
+from app.db.postgresql import get_session
+from app.db.queries import select_all, insert_one
 
 
 services_router = APIRouter(prefix='/services')

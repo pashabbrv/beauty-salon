@@ -29,7 +29,7 @@ class ServerNotifications:
             if message == 'confirmation' and detail is not None:
                     self.send_message_to_user(
                         simple_phone_to_id(detail['phone']),
-                        f'Код подтверждения записи: {detail['code']}'
+                        f"Код подтверждения записи: {detail['code']}"
                     )
             else:
                 logger.info('Некорректная структура JSON')
