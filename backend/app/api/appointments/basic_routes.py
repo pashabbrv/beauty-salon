@@ -154,13 +154,17 @@ async def create_new_appointment(
     await session.refresh(new_appointment)
 
     # 7. Отправляем уведомление с кодом подтверждения
-    result = await ws_appointments_manager.broadcast({
-        'message': 'confirmation',
-        'detail': {
-            'phone': new_appointment.phone,
-            'code': new_appointment.secret_code
-        }
-    })
+    try:
+        result = await ws_appointments_manager.broadcast({
+            'message': 'confirmation',
+            'detail': {
+                'phone': new_appointment.phone,
+                'code': new_appointment.secret_code
+            }
+        })
+        print(f"[DEBUG] WebSocket broadcast result: {result}, phone: {new_appointment.phone}, code: {new_appointment.secret_code}")
+    except Exception as e:
+        print(f"[ERROR] WebSocket broadcast failed: {e}")
     
     return new_appointment
 

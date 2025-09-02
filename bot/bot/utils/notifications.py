@@ -22,15 +22,20 @@ class ServerNotifications:
     async def handle_websocket_message(self, message_data: str):
         """Обработка сообщений от WebSocket сервера"""
         try:
+            logger.info(f'Получено WebSocket сообщение: {message_data}')
             data = json.loads(message_data)
             message = data.get('message')
             detail = data.get('detail')
             # --- Уведомление подтверждения записи ---
             if message == 'confirmation' and detail is not None:
-                    self.send_message_to_user(
-                        simple_phone_to_id(detail['phone']),
-                        f"Код подтверждения записи: {detail['code']}"
-                    )
+                phone = detail['phone']
+                code = detail['code']
+                whatsapp_id = simple_phone_to_id(phone)
+                logger.info(f'Отправка кода подтверждения: {phone} -> {whatsapp_id}, код: {code}')
+                self.send_message_to_user(
+                    whatsapp_id,
+                    f"Код подтверждения записи: {code}"
+                )
             else:
                 logger.info('Некорректная структура JSON')
         except json.JSONDecodeError:

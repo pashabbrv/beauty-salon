@@ -28,12 +28,12 @@ INSERT INTO services (name) VALUES
 ('Эпиляция');
 
 -- Добавление мастеров
-INSERT INTO masters (name, specialization, rating) VALUES 
-('Анна Петрова', 'Топ-стилист', 4.9),
-('Мария Иванова', 'Мастер маникюра', 4.8),
-('Елена Смирнова', 'Визажист', 4.9),
-('Ольга Козлова', 'Мастер по наращиванию', 4.7),
-('Татьяна Волкова', 'Массажист', 4.8);
+INSERT INTO masters (name, phone) VALUES 
+('Анна Петрова', '+996555123001'),
+('Мария Иванова', '+996555123002'),
+('Елена Смирнова', '+996555123003'),
+('Ольга Козлова', '+996555123004'),
+('Татьяна Волкова', '+996555123005');
 
 -- Добавление офферингов (услуга + мастер + цена + длительность)
 INSERT INTO offerings (service_id, master_id, price, duration) VALUES 
@@ -57,8 +57,8 @@ INSERT INTO offerings (service_id, master_id, price, duration) VALUES
 (8, 5, 1800, '00:45:00'); -- Эпиляция
 
 -- Добавление тестового клиента
-INSERT INTO customers (name, phone, status, visit_count, last_visit) VALUES 
-('Тестовый клиент', '+996555123456', 'active', 0, NULL);
+INSERT INTO customers (name, phone, status) VALUES 
+('Тестовый клиент', '+996555123456', 'active');
 
 -- Проверка добавленных данных
 SELECT 'Услуги:' as info, count(*) as count FROM services
