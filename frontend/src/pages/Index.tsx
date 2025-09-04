@@ -4,7 +4,6 @@ import HeroSection from "@/components/HeroSection";
 import ServicesSection from "@/components/ServicesSection";
 import MastersSection from "@/components/MastersSection";
 import BookingModal from "@/components/BookingModal";
-import ApiConnectionTest from "@/components/ApiConnectionTest";
 
 const Index = () => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -44,11 +43,6 @@ const Index = () => {
         </div>
         <div ref={mastersRef}>
           <MastersSection onBookingClick={openBookingModal} />
-        </div>
-        
-        {/* API Connection Test - Remove this in production */}
-        <div className="container mx-auto px-4 py-8 flex justify-center">
-          <ApiConnectionTest />
         </div>
         
         {/* Booking Modal */}

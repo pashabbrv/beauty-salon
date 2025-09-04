@@ -1,11 +1,27 @@
 import os
 import requests
 from typing import Optional, Tuple, Any
+from ..utils.excel_export import create_customers_excel, cleanup_temp_file
 
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL")
 AUTH_TOKEN       = os.getenv("BACKEND_TOKEN")
 
 CUSTOMERS_PATH = "/api/customers/"
+
+
+def create_customers_excel_file(customers):
+    """
+    Создает Excel файл с клиентами и возвращает путь к файлу
+    """
+    if not customers:
+        return None
+    
+    try:
+        file_path = create_customers_excel(customers)
+        return file_path
+    except Exception as e:
+        print(f"[ERROR] Ошибка создания Excel файла: {e}")
+        return None
 
 
 def format_customers_compact(users):

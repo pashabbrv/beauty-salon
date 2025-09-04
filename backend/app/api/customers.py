@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, Body, Path, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from app.core.auth import verify_token
-from app.core.schemas import CustomerGet, CustomersStatusUpdate
-from app.db.models import Customer
-from app.db.postgresql import get_session
-from app.db.queries import select_all, select_one
+from ..core.auth import verify_token
+from ..core.schemas import CustomerGet, CustomersStatusUpdate
+from ..db.models import Customer
+from ..db.postgresql import get_session
+from ..db.queries import select_all, select_one
 
 
 customers_router = APIRouter(prefix='/customers')

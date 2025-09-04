@@ -3,12 +3,12 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from app.core.auth import verify_token
-from app.core.schemas import OKModel, ConfirmationCode
-from app.db.models import Appointment
-from app.db.postgresql import get_session
-from app.db.queries import select_one
-from app.ws.appointments.notifications import ws_appointments_manager
+from ...core.auth import verify_token
+from ...core.schemas import OKModel, ConfirmationCode
+from ...db.models import Appointment
+from ...db.postgresql import get_session
+from ...db.queries import select_one
+from ...ws.appointments.notifications import ws_appointments_manager
 
 
 confirmation_router = APIRouter()

@@ -8,13 +8,13 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from app.api.offerings.utils import is_slot_busy, generate_time_slots_for_now
-from app.core.auth import verify_token
-from app.core.schemas import AppointmentCreate, AppointmentGet
-from app.db.models import Offering, Customer, Appointment, Occupation
-from app.db.postgresql import get_session
-from app.db.queries import select_one
-from app.ws.appointments.notifications import ws_appointments_manager
+from ...api.offerings.utils import is_slot_busy, generate_time_slots_for_now
+from ...core.auth import verify_token
+from ...core.schemas import AppointmentCreate, AppointmentGet
+from ...db.models import Offering, Customer, Appointment, Occupation
+from ...db.postgresql import get_session
+from ...db.queries import select_one
+from ...ws.appointments.notifications import ws_appointments_manager
 
 
 basic_router = APIRouter()

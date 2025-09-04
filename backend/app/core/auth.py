@@ -1,4 +1,4 @@
-from fastapi import Header, HTTPException, status, WebSocket
+from fastapi import Header, HTTPException, status
 from typing import Annotated
 from dotenv import load_dotenv
 from os import getenv

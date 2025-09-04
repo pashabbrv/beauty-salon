@@ -95,7 +95,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
     return date.toLocaleTimeString('ru-RU', { 
       hour: '2-digit', 
       minute: '2-digit',
-      timeZone: 'UTC'
+      timeZone: 'Asia/Bishkek'
     });
   };
 
@@ -106,7 +106,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
-      timeZone: 'UTC'
+      timeZone: 'Asia/Bishkek'
     });
   };
 
@@ -128,7 +128,20 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
   };
 
   const handlePhoneChange = (value: string) => {
-    updateContactInfo(clientName, value);
+    // Ensure phone always starts with + and cannot be removed
+    let formattedValue = value;
+    
+    // If user tries to remove +, add it back
+    if (!formattedValue.startsWith('+')) {
+      formattedValue = '+' + formattedValue.replace(/^\+*/, '');
+    }
+    
+    // Limit to 20 characters total
+    if (formattedValue.length > 20) {
+      formattedValue = formattedValue.substring(0, 20);
+    }
+    
+    updateContactInfo(clientName, formattedValue);
   };
 
   const handleServiceSelect = (service: any) => {
@@ -206,20 +219,20 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="text-sm font-medium flex items-center">
                     <Phone className="w-4 h-4 mr-2 text-primary" />
-                    Номер телефона (2-20 символов)
+                    Номер телефона (3-20 символов)
                   </Label>
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+996 (___) ___-___"
+                    placeholder="+"
                     value={clientPhone}
                     onChange={(e) => handlePhoneChange(e.target.value)}
                     className="border-primary/20 focus:border-primary"
-                    minLength={2}
+                    minLength={3}
                     maxLength={20}
                   />
-                  {clientPhone.length > 0 && (clientPhone.length < 2 || clientPhone.length > 20) && (
-                    <p className="text-sm text-red-500">Номер телефона должен содержать от 2 до 20 символов</p>
+                  {clientPhone.length > 0 && (clientPhone.length < 3 || clientPhone.length > 20 || !clientPhone.startsWith('+')) && (
+                    <p className="text-sm text-red-500">Номер телефона должен начинаться с + и содержать от 3 до 20 символов</p>
                   )}
                 </div>
 
@@ -387,7 +400,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit',
-                          timeZone: 'UTC'
+                          timeZone: 'Asia/Bishkek'
                         })}
                       </p>
                     </div>
@@ -429,7 +442,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit',
-                        timeZone: 'UTC'
+                        timeZone: 'Asia/Bishkek'
                       })}
                     </span>
                   </div>

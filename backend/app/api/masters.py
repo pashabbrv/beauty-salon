@@ -2,11 +2,11 @@ from fastapi import APIRouter, status, Body, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from app.core.auth import verify_token
-from app.core.schemas import MasterInfo, MasterDB
-from app.db.models import Master
-from app.db.postgresql import get_session
-from app.db.queries import select_all, insert_one
+from ..core.auth import verify_token
+from ..core.schemas import MasterInfo, MasterDB
+from ..db.models import Master
+from ..db.postgresql import get_session
+from ..db.queries import select_all, insert_one
 
 
 masters_router = APIRouter(prefix='/masters')

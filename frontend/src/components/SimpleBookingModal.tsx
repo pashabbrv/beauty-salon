@@ -13,8 +13,25 @@ interface SimpleBookingModalProps {
 
 const SimpleBookingModal = ({ isOpen, onClose }: SimpleBookingModalProps) => {
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState("+");
   const { toast } = useToast();
+
+  const handlePhoneChange = (value: string) => {
+    // Ensure phone always starts with + and cannot be removed
+    let formattedValue = value;
+    
+    // If user tries to remove +, add it back
+    if (!formattedValue.startsWith('+')) {
+      formattedValue = '+' + formattedValue.replace(/^\+*/, '');
+    }
+    
+    // Limit to 20 characters total
+    if (formattedValue.length > 20) {
+      formattedValue = formattedValue.substring(0, 20);
+    }
+    
+    setPhone(formattedValue);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +53,7 @@ const SimpleBookingModal = ({ isOpen, onClose }: SimpleBookingModalProps) => {
 
     // Reset form and close modal
     setName("");
-    setPhone("");
+    setPhone("+");
     onClose();
   };
 
@@ -75,9 +92,9 @@ const SimpleBookingModal = ({ isOpen, onClose }: SimpleBookingModalProps) => {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="+996 (___) ___-___"
+                placeholder="+"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => handlePhoneChange(e.target.value)}
                 className="border-primary/20 focus:border-primary"
               />
             </div>

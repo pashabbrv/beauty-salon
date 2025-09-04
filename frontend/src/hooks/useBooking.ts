@@ -28,7 +28,7 @@ export interface BookingState {
 
 const initialState: BookingState = {
   clientName: '',
-  clientPhone: '',
+  clientPhone: '+',
   services: [],
   selectedService: null,
   offerings: [],
@@ -244,8 +244,9 @@ export const useBooking = () => {
       case 0: // Контактные данные
         return state.clientName.trim().length >= 2 && 
                state.clientName.trim().length <= 100 &&
-               state.clientPhone.trim().length >= 2 && 
-               state.clientPhone.trim().length <= 20;
+               state.clientPhone.trim().length >= 3 && 
+               state.clientPhone.trim().length <= 20 &&
+               state.clientPhone.startsWith('+');
       case 1: // Выбор услуги
         return state.selectedService !== null;
       case 2: // Выбор мастера

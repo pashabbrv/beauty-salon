@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.exceptions import register_exception_handlers
-from app.db.postgresql import create_tables
-from app.api import routers as api_routers
-from app.ws import routers as ws_routers
+from .core.exceptions import register_exception_handlers
+from .db.postgresql import create_tables
+from .api import routers as api_routers
+from .ws import routers as ws_routers
 
 
 app = FastAPI(on_startup=[create_tables])

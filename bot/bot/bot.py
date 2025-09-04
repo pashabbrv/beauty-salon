@@ -9,8 +9,9 @@ import requests
 from dotenv import load_dotenv
 from .utils.auth import OWNER_ID, is_owner
 from .utils.notifications import ServerNotifications
-from .commands.export_appointments import get_appointments, format_appointments_compact
-from .commands.export_users import get_customers, format_customers_compact
+from .commands.export_appointments import get_appointments, format_appointments_compact, create_appointments_excel_file
+from .commands.export_users import get_customers, format_customers_compact, create_customers_excel_file
+from .utils.excel_export import cleanup_temp_file
 
 
 print(f"[INFO] OWNER_ID={OWNER_ID}")
@@ -28,10 +29,16 @@ HELP_TEXT = (
     "/help — список команд\n"
     # "/add_admin 996xxxxxxxxx\n"
     # "/remove_admin 996xxxxxxxxx\n"
-    "/export_appointments — экспорт базы записей\n"
-    "/export_users — экспорт клиентской базы"
+    "/export_appointments — экспорт базы записей в Excel\n"
+    "/export_users — экспорт клиентской базы в Excel"
 )
-def handle_message(user_id: str, text: str) -> str:
+def handle_message(user_id: str, text: str) -> tuple[str, str] | str:
+    """
+    Обрабатывает сообщение и возвращает ответ.
+    Возвращает:
+    - str: обычный текстовый ответ
+    - tuple[str, str]: ('file', file_path) для отправки файла
+    """
     print(user_id, text)
     if not is_owner(user_id):
         return "" 
@@ -44,12 +51,26 @@ def handle_message(user_id: str, text: str) -> str:
         result = get_appointments()
         if not result[0]:
             return "Произошла ошибка во время получения записей"
-        return format_appointments_compact(result[1])
+        
+        # Создаем Excel файл
+        file_path = create_appointments_excel_file(result[1])
+        if file_path:
+            return ('file', file_path)
+        else:
+            return "Ошибка создания Excel файла с записями"
+    
     if text.startswith("/export_users"):
         result = get_customers()
         if not result[0]:
             return "Произошла ошибка во время получения записей"
-        return format_customers_compact(result[1])
+        
+        # Создаем Excel файл
+        file_path = create_customers_excel_file(result[1])
+        if file_path:
+            return ('file', file_path)
+        else:
+            return "Ошибка создания Excel файла с клиентами"
+    
     return "🤖 Команда не распознана. Напиши /help"
 
 
@@ -78,6 +99,38 @@ def _delete_notification(receipt_id):
         print(f"[DEBUG] DeleteNotification {receipt_id} OK")
     except requests.RequestException as e:
         print(f"[WARN] DeleteNotification {receipt_id} failed: {e}")
+
+
+def _send_file(chat_id_or_phone: str, file_path: str, filename: str = None):
+    """Send a file via GreenAPI"""
+    if not os.path.exists(file_path):
+        print(f"[ERROR] File not found: {file_path}")
+        return False
+        
+    try:
+        url = f"{BASE}/sendFileByUpload/{API_TOKEN}"
+        
+        # Prepare the payload
+        payload = {}
+        if chat_id_or_phone.endswith("@c.us"):
+            payload["chatId"] = chat_id_or_phone
+        else:
+            payload["phone"] = chat_id_or_phone
+            
+        if filename:
+            payload["fileName"] = filename
+        
+        # Send file
+        with open(file_path, 'rb') as f:
+            files = {'file': f}
+            r = requests.post(url, data=payload, files=files, timeout=30)
+        
+        r.raise_for_status()
+        print(f"[DEBUG] File sent → {chat_id_or_phone}: {file_path}")
+        return True
+    except requests.RequestException as e:
+        print(f"[ERROR] sendFile: {e}")
+        return False
 
 
 def _send_text(chat_id_or_phone: str, text: str):
@@ -179,7 +232,29 @@ def poll_loop():
 
             reply = handle_message(user_id, text)
             print(f"[OUT] user={user_id} reply={reply!r}")
-            _send_text(chat_id or user_id, reply)
+            
+            # Проверяем, надо ли отправить файл или текст
+            if isinstance(reply, tuple) and len(reply) == 2 and reply[0] == 'file':
+                # Отправляем файл
+                file_path = reply[1]
+                filename = os.path.basename(file_path)
+                
+                # Отправляем сообщение о начале отправки
+                _send_text(chat_id or user_id, "📋 Подготавливаю Excel файл...")
+                
+                # Отправляем файл
+                success = _send_file(chat_id or user_id, file_path, filename)
+                
+                if success:
+                    _send_text(chat_id or user_id, "✅ Файл успешно отправлен!")
+                else:
+                    _send_text(chat_id or user_id, "❌ Ошибка отправки файла")
+                
+                # Удаляем временный файл
+                cleanup_temp_file(file_path)
+            else:
+                # Обычное текстовое сообщение
+                _send_text(chat_id or user_id, reply)
 
         except Exception as e:
             print(f"[ERROR] Обработка: {e}")

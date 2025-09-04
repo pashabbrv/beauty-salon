@@ -1,11 +1,27 @@
 import os
 import requests
 from typing import Optional, Tuple, Any
+from ..utils.excel_export import create_appointments_excel, cleanup_temp_file
 
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL")
 AUTH_TOKEN       = os.getenv("BACKEND_TOKEN")
 
 APPOINTMENTS_PATH = "/api/appointments/"
+
+
+def create_appointments_excel_file(appointments):
+    """
+    Создает Excel файл с записями и возвращает путь к файлу
+    """
+    if not appointments:
+        return None
+    
+    try:
+        file_path = create_appointments_excel(appointments)
+        return file_path
+    except Exception as e:
+        print(f"[ERROR] Ошибка создания Excel файла: {e}")
+        return None
 
 
 def format_appointments_compact(appointments):
