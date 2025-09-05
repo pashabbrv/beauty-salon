@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.gitignore
+README.md
+.env
+.env.local
+.env.production.local
+.env.test.local
+.vite
+coverage
+*.log

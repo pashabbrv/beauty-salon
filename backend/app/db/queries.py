@@ -1,0 +1,61 @@
+from fastapi import HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy import select, insert
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Type, TypeVar
+
+
+ORM = TypeVar('ORM', bound=DeclarativeBase)
+
+
+async def select_all(session: AsyncSession, model: DeclarativeBase) -> list:
+    """Получение списка всех записей определённой модели"""
+    query = select(model)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+async def select_one(
+    session: AsyncSession,
+    model: Type[ORM],
+    filter: dict
+) -> ORM | None:
+    """Получение определённой записи из БД"""
+    obj = await session.execute(
+        select(model).filter_by(**filter)
+    )
+    return obj.scalar_one_or_none()
+
+
+async def insert_one(
+    session: AsyncSession,
+    model: Type[ORM],
+    schema: BaseModel,
+    exists_filter: dict,
+    error_msg: str = 'This object already exists'
+) -> ORM:
+    """Добавляет в таблицу определённой модели запись по схеме"""
+    # Проверка, что такой объект уже существует
+    if await select_one(session, model, exists_filter) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=error_msg
+        )
+
+    # Создаём словарь с данными для вставки
+    data = schema.model_dump()
+    
+    # Вставка и возврат новой записи
+    result = await session.execute(
+        insert(model)
+        .values(**data)
+        .returning(model)
+    )
+    new_obj = result.scalar_one()
+    await session.commit()
+    
+    # Явно загружаем все атрибуты
+    await session.refresh(new_obj)
+    
+    return new_obj
