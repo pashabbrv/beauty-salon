@@ -8,13 +8,13 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from api.offerings.utils import is_slot_busy, generate_time_slots_for_now
-from core.auth import verify_token
-from core.schemas import AppointmentCreate, AppointmentGet
-from db.models import Offering, Customer, Appointment, Occupation
-from db.postgresql import get_session
-from db.queries import select_one
-from ws.appointments.notifications import ws_appointments_manager
+from ...api.offerings.utils import is_slot_busy, generate_time_slots_for_now
+from ...core.auth import verify_token
+from ...core.schemas import AppointmentCreate, AppointmentGet
+from ...db.models import Offering, Customer, Appointment, Occupation
+from ...db.postgresql import get_session
+from ...db.queries import select_one
+from ...ws.appointments.notifications import ws_appointments_manager
 
 
 basic_router = APIRouter()
@@ -157,13 +157,17 @@ async def create_new_appointment(
     await session.refresh(new_appointment)
 
     # 7. Отправляем уведомление с кодом подтверждения
-    result = await ws_appointments_manager.broadcast({
-        'message': 'confirmation',
-        'detail': {
-            'phone': new_appointment.phone,
-            'code': new_appointment.secret_code
-        }
-    })
+    try:
+        result = await ws_appointments_manager.broadcast({
+            'message': 'confirmation',
+            'detail': {
+                'phone': new_appointment.phone,
+                'code': new_appointment.secret_code
+            }
+        })
+        print(f"[DEBUG] WebSocket broadcast result: {result}, phone: {new_appointment.phone}, code: {new_appointment.secret_code}")
+    except Exception as e:
+        print(f"[ERROR] WebSocket broadcast failed: {e}")
     
     return new_appointment
 

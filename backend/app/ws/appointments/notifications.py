@@ -4,7 +4,7 @@ from fastapi import (
 )
 from typing import Annotated
 
-from core.auth import verify_token_bool
+from ...core.auth import verify_token_bool
 from ..connection_manager import ConnectionManager
 
 
