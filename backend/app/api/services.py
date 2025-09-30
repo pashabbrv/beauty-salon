@@ -68,7 +68,7 @@ async def update_service(
     if updated_service is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Service not found"
+            detail='Service not found'
         )
     
     model_info = ServiceDB.model_validate(updated_service, from_attributes=True)
@@ -97,7 +97,7 @@ async def update_service(
     if existing_service is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Service not found"
+            detail='Service not found'
         )
     
     # Удаляем услугу
