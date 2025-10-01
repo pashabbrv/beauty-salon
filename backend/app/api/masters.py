@@ -52,13 +52,13 @@ async def add_new_master(
 async def update_service(
     session: Annotated[AsyncSession, Depends(get_session)],
     master_id: Annotated[int, Path()],
-    service: Annotated[MasterInfo, Body()]
+    master: Annotated[MasterInfo, Body()]
 ):
     """Изменение у существующего мастера всех полей"""
     query = (
         update(Master)
         .where(Master.id == master_id)
-        .values(**service.model_dump())
+        .values(**master.model_dump())
         .returning(Master)
     )
     

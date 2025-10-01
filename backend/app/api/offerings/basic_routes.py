@@ -1,5 +1,5 @@
-from fastapi import APIRouter, status, Body, Query, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, status, Body, Query, Path, Depends, HTTPException
+from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -83,3 +83,88 @@ async def create_new_offering(
         'price': new_offering.price,
         'duration': new_offering.duration
     }
+
+
+@basic_router.put(
+    '/{offering_id}/',
+    response_model=OfferingGet,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(verify_token)]
+)
+async def update_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    offering_id: Annotated[int, Path()],
+    offering: Annotated[OfferingCreate, Body()]
+):
+    # Получаем объект перед обновлением
+    existing_offering = await select_one(
+        session,
+        Offering,
+        {'id': offering_id}
+    )
+    
+    if existing_offering is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Offering not found'
+        )
+    
+    # Проверяем существование мастера
+    master = await select_one(session, Master, {'id': offering.master_id})
+    if master is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Master with such id doesn\'t exist'
+        )
+    # Проверяем существование услуги
+    service = await select_one(session, Service, {'id': offering.service_id})
+    if service is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Service with such id doesn\'t exist'
+        )
+    
+    # Обновляем поля
+    for field, value in offering.model_dump().items():
+        setattr(existing_offering, field, value)
+
+    await session.commit()
+    await session.refresh(existing_offering)
+    await session.refresh(master)
+    await session.refresh(service)
+    
+    return {
+        'id': existing_offering.id,
+        'master': MasterDB.model_validate(master),
+        'service': ServiceDB.model_validate(service),
+        'price': existing_offering.price,
+        'duration': existing_offering.duration
+    }
+
+
+@basic_router.delete(
+    '/{offering_id}/',
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(verify_token)]
+)
+async def update_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    offering_id: Annotated[int, Path()]
+):
+    """Удаление существующей услуги мастера"""
+    # Получаем услугу мастера по ID
+    existing_offering = await select_one(
+        session,
+        Offering,
+        {'id': offering_id}
+    )
+    
+    if existing_offering is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Offering not found'
+        )
+    
+    # Удаляем услугу мастера
+    await session.delete(existing_offering)
+    await session.commit()
