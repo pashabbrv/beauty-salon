@@ -1,9 +1,3 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
-// Remove trailing slash if present
-const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
-const apiUrl = cleanApiUrl.endsWith('/api') ? cleanApiUrl : `${cleanApiUrl}/api`;
-
 export interface Service {
   id: number;
   name: string;
@@ -45,8 +39,46 @@ export interface Appointment {
   created_at: string;
 }
 
+export interface Customer {
+  id: number;
+  phone: string;
+  name: string;
+  status: string;
+  created_at: string;
+}
+
+// Extend the existing interfaces for admin functionality
+export interface AdminStats {
+  totalAppointments: number;
+  confirmedAppointments: number;
+  pendingAppointments: number;
+  totalCustomers: number;
+  totalServices: number;
+  totalMasters: number;
+}
+
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: number;
+    username: string;
+    role: string;
+  };
+}
+
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
+    // Remove trailing slash if present
+    const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
+    const apiUrl = cleanApiUrl.endsWith('/api') ? cleanApiUrl : `${cleanApiUrl}/api`;
+    
     const url = `${apiUrl}${endpoint}`;
     
     const defaultOptions: RequestInit = {
@@ -120,12 +152,12 @@ class ApiService {
   }
 
   // 5b: Подтвердить кодом
-  async confirmAppointment(appointmentId: number, confirmationCode: string): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/appointments/${appointmentId}/confirm/`, {
-      method: 'POST',
-      body: JSON.stringify({ confirmation_code: confirmationCode }),
-    });
-  }
+async confirmAppointment(appointmentId: number, confirmationCode: string): Promise<{ message: string }> {
+  return this.request<{ message: string }>(`/appointments/${appointmentId}/confirm/`, {
+    method: 'POST',
+    body: JSON.stringify({ confirmation_code: confirmationCode }),
+  });
+}
 
   // Админ методы (опционально)
   async adminConfirmAppointment(appointmentId: number, authToken: string): Promise<{ message: string }> {
@@ -158,3 +190,209 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+
+class AdminApiService {
+  private authToken: string | null = null;
+
+  constructor() {
+    // Initialize token from localStorage if available
+    const storedToken = localStorage.getItem('adminToken');
+    if (storedToken) {
+      this.authToken = storedToken;
+    }
+  }
+
+  setAuthToken(token: string | null) {
+    this.authToken = token;
+    if (token) {
+      localStorage.setItem('adminToken', token);
+    } else {
+      localStorage.removeItem('adminToken');
+    }
+  }
+
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
+    // Remove trailing slash if present
+    const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
+    const apiUrl = cleanApiUrl.endsWith('/api') ? cleanApiUrl : `${cleanApiUrl}/api`;
+    
+    const url = `${apiUrl}${endpoint}`;
+    
+    const defaultOptions: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    // Add auth token to headers if available
+    if (this.authToken) {
+      (defaultOptions.headers as Record<string, string>)['Auth-Token'] = this.authToken;
+      console.log(`Sending request to ${url} with token: ${this.authToken}`);
+    } else {
+      // Try to get token from localStorage as fallback
+      const storedToken = localStorage.getItem('adminToken');
+      if (storedToken) {
+        (defaultOptions.headers as Record<string, string>)['Auth-Token'] = storedToken;
+        console.log(`Sending request to ${url} with stored token: ${storedToken}`);
+      } else {
+        console.log(`Sending request to ${url} without token`);
+      }
+    }
+
+    const config: RequestInit = {
+      ...defaultOptions,
+      ...options,
+      headers: {
+        ...defaultOptions.headers,
+        ...options?.headers,
+      },
+    };
+
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        console.error(`HTTP error! status: ${response.status}`, await response.text());
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // For status 204 (No Content) don't try to parse JSON
+      if (response.status === 204) {
+        return {} as T;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('API request failed:', error);
+      throw error;
+    }
+  }
+
+  // Authentication endpoints
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    // In a real app, this would be a proper login endpoint
+    // For now, we'll simulate authentication using the BACKEND_TOKEN
+    const token = import.meta.env.VITE_ADMIN_TOKEN || 'example';
+    console.log('Token from environment:', import.meta.env.VITE_ADMIN_TOKEN);
+    console.log('Using token:', token);
+    this.setAuthToken(token);
+    
+    // Simulate a delay to mimic network request
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Simulate successful login
+    return {
+      token,
+      user: {
+        id: 1,
+        username: credentials.username,
+        role: 'admin'
+      }
+    };
+  }
+
+  async logout(): Promise<void> {
+    this.setAuthToken(null);
+  }
+
+  // Dashboard statistics
+  async getAdminStats(): Promise<AdminStats> {
+    // This is a simplified implementation
+    // In a real app, you would have actual endpoints for these stats
+    const appointments = await this.getAppointments();
+    const customers = await this.getCustomers();
+    const services = await this.getServices();
+    const masters = await this.getMasters();
+    
+    const confirmedAppointments = appointments.filter(a => a.confirmed).length;
+    
+    return {
+      totalAppointments: appointments.length,
+      confirmedAppointments,
+      pendingAppointments: appointments.length - confirmedAppointments,
+      totalCustomers: customers.length,
+      totalServices: services.length,
+      totalMasters: masters.length
+    };
+  }
+
+  // Customer management
+  async getCustomers(): Promise<Customer[]> {
+    return this.request<Customer[]>('/customers/');
+  }
+
+  async updateCustomerStatus(phone: string, status: string): Promise<Customer> {
+    return this.request<Customer>(`/customers/${phone}/status/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+  }
+
+  // Service management
+  async getServices(): Promise<Service[]> {
+    return this.request<Service[]>('/services/');
+  }
+
+  async createService(service: { name: string }): Promise<Service> {
+    return this.request<Service>('/services/', {
+      method: 'POST',
+      body: JSON.stringify(service)
+    });
+  }
+
+  // Master management
+  async getMasters(): Promise<Master[]> {
+    return this.request<Master[]>('/masters/');
+  }
+
+  async createMaster(master: { name: string; phone: string }): Promise<Master> {
+    return this.request<Master>('/masters/', {
+      method: 'POST',
+      body: JSON.stringify(master)
+    });
+  }
+
+  // Offering management
+  async getOfferings(): Promise<Offering[]> {
+    return this.request<Offering[]>('/offerings/');
+  }
+
+  async createOffering(offering: {
+    master_id: number;
+    service_id: number;
+    price: number;
+    duration: string;
+  }): Promise<Offering> {
+    return this.request<Offering>('/offerings/', {
+      method: 'POST',
+      body: JSON.stringify(offering)
+    });
+  }
+
+  // Appointment management
+  async getAppointments(date?: string, confirmed?: boolean): Promise<Appointment[]> {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    if (confirmed !== undefined) params.append('confirmed', confirmed.toString());
+
+    const query = params.toString();
+    return this.request<Appointment[]>(`/appointments/${query ? `?${query}` : ''}`);
+  }
+
+  async deleteAppointment(appointmentId: number): Promise<void> {
+    return this.request<void>(`/appointments/${appointmentId}/`, {
+      method: 'DELETE'
+    });
+  }
+
+  async confirmAppointment(appointmentId: number): Promise<{ message: string }> {
+    // This would be an admin confirmation endpoint
+    return this.request<{ message: string }>(`/appointments/${appointmentId}/admin_confirm/`, {
+      method: 'POST'
+    });
+  }
+}
+
+export const adminApiService = new AdminApiService();
