@@ -1,28 +1,43 @@
+version: '3.8'
+
 services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: beauty-salon-nginx
+    ports:
+      - "80:80"    # Основной порт для доступа по IP
+      - "443:443"  # Для будущего SSL
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+    networks:
+      - beauty-salon-network
+
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: beauty-salon-frontend
-    ports:
-      - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://172.20.10.2/api 
       - VITE_ADMIN_TOKEN=your-secure-backend-token-here
     restart: unless-stopped
     depends_on:
       - backend
+    networks:
+      - beauty-salon-network
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: beauty-salon-backend
-    ports:
-      - "8000:8000"
     env_file:
       - .env
     restart: unless-stopped
@@ -30,6 +45,8 @@ services:
       - ./backend:/app
     depends_on:
       - db
+    networks:
+      - beauty-salon-network
 
   db:
     image: postgres:15
@@ -38,11 +55,11 @@ services:
       POSTGRES_DB: beauty_salon
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - beauty-salon-network
 
   whatsapp-bot:
     build:
@@ -56,6 +73,12 @@ services:
       - ./bot:/app
     depends_on:
       - backend
+    networks:
+      - beauty-salon-network
 
 volumes:
   postgres_data:
+
+networks:
+  beauty-salon-network:
+    driver: bridge
