@@ -3,12 +3,12 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from ...core.auth import verify_token
-from ...core.schemas import OKModel, ConfirmationCode
-from ...db.models import Appointment
-from ...db.postgresql import get_session
-from ...db.queries import select_one
-from ...ws.appointments.notifications import ws_appointments_manager
+from core.auth import verify_token
+from core.schemas import OKModel, ConfirmationCode
+from db.models import Appointment
+from db.postgresql import get_session
+from db.queries import select_one
+from ws.appointments.notifications import ws_appointments_manager
 
 
 confirmation_router = APIRouter()
@@ -91,10 +91,10 @@ async def confirm_appointment_using_code(
 
 @confirmation_router.post(
     '/{appointment_id}/admin_confirm/',
-    response_model=OKModel
+    response_model=OKModel,
+    dependencies=[Depends(verify_token)]
 )
 async def confirm_appointment_as_admin(
-    _: Annotated[None, Depends(verify_token)], # Верификация по токену
     session: Annotated[AsyncSession, Depends(get_session)],
     appointment_id: Annotated[int, Path()]
 ):

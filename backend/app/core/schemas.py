@@ -5,6 +5,8 @@ from typing import Annotated
 
 phone_str = Annotated[str, Field(min_length=2, max_length=20)]
 name_str = Annotated[str, Field(min_length=2, max_length=100)]
+id_int = Annotated[int, Field(gt=0)]
+price_type = Annotated[int, Field(ge=0)]
 
 
 class ServiceInfo(BaseModel):
@@ -16,7 +18,7 @@ class ServiceInfo(BaseModel):
 class ServiceDB(ServiceInfo):
     """Модель со всей информацией об услуге из базы данных
     \n_(по-умолчанию используется верификация **модели**)_"""
-    id: int
+    id: id_int
 
     class Config:
         from_attributes = True
@@ -32,7 +34,7 @@ class MasterInfo(BaseModel):
 class MasterDB(MasterInfo):
     """Модель со всей информацией о мастере из базы данных
     \n_(по-умолчанию используется верификация **модели**)_"""
-    id: int
+    id: id_int
 
     class Config:
         from_attributes = True
@@ -41,17 +43,17 @@ class MasterDB(MasterInfo):
 class OfferingCreate(BaseModel):
     """Модель с основной информацией, используемой для создания услуги мастера
     \n_(по-умолчанию используется верификация **словаря**)_"""
-    master_id: int
-    service_id: int
-    price: int
+    master_id: id_int
+    service_id: id_int
+    price: price_type
     duration: time
 
 
 class OfferingDBBase(BaseModel):
     """Модель с базовой информацией об услуге мастера из базы данных
     \n_(по-умолчанию используется верификация **модели**)_"""
-    id: int
-    price: int
+    id: id_int
+    price: price_type
     duration: time
 
     class Config:
@@ -88,14 +90,14 @@ class AppointmentCreate(BaseModel):
     \n_(по-умолчанию используется верификация **словаря**)_"""
     name: name_str
     phone: phone_str
-    offering_id: int
+    offering_id: id_int
     datetime: datetime
 
 
 class AppointmentGet(BaseModel):
     """Модель со всей информацией о записи (кроме кода подтверждения)
     \n_(по-умолчанию используется верификация **модели**)_"""
-    id: int
+    id: id_int
     name: name_str
     phone: phone_str
     offering: OfferingGet
@@ -116,7 +118,7 @@ class ConfirmationCode(BaseModel):
 class CustomerGet(BaseModel):
     """Модель со всей информацией о пользователе из базы данных
     \n_(по-умолчанию используется верификация **модели**)_"""
-    id: int
+    id: id_int
     phone: phone_str
     name: name_str
     status: Annotated[str, Field(max_length=10)]
