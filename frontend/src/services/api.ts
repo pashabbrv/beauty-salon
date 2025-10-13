@@ -73,13 +73,15 @@ export interface AuthResponse {
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
     // Remove trailing slash if present
     const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
-    const apiUrl = cleanApiUrl.endsWith('/api') ? cleanApiUrl : `${cleanApiUrl}/api`;
     
-    const url = `${apiUrl}${endpoint}`;
+    // Ensure the endpoint starts with /
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    
+    const url = `${cleanApiUrl}${cleanEndpoint}`;
     
     const defaultOptions: RequestInit = {
       headers: {
@@ -117,7 +119,7 @@ class ApiService {
 
   // Шаг 2: Получить список услуг
   async getServices(): Promise<Service[]> {
-    return this.request<Service[]>('/services/');
+    return this.request<Service[]>('/api/services/');
   }
 
   // Шаг 3: Получить офферинги по услуге
@@ -128,17 +130,17 @@ class ApiService {
       params.append('master_id', masterId.toString());
     }
 
-    return this.request<Offering[]>(`/offerings/?${params.toString()}`);
+    return this.request<Offering[]>(`/api/offerings/?${params.toString()}`);
   }
 
   // Шаг 4: Получить доступные слоты времени
   async getTimeSlots(offeringId: number): Promise<string[]> {
-    return this.request<string[]>(`/offerings/${offeringId}/slots/`);
+    return this.request<string[]>(`/api/offerings/${offeringId}/slots/`);
   }
 
   // Шаг 5: Создать запись
   async createAppointment(appointmentData: AppointmentRequest): Promise<Appointment> {
-    return this.request<Appointment>('/appointments/', {
+    return this.request<Appointment>('/api/appointments/', {
       method: 'POST',
       body: JSON.stringify(appointmentData),
     });
@@ -146,14 +148,14 @@ class ApiService {
 
   // 5a: Отправить/обновить код подтверждения
   async refreshConfirmationCode(appointmentId: number): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/appointments/${appointmentId}/refresh/`, {
+    return this.request<{ message: string }>(`/api/appointments/${appointmentId}/refresh/`, {
       method: 'POST',
     });
   }
 
   // 5b: Подтвердить кодом
 async confirmAppointment(appointmentId: number, confirmationCode: string): Promise<{ message: string }> {
-  return this.request<{ message: string }>(`/appointments/${appointmentId}/confirm/`, {
+  return this.request<{ message: string }>(`/api/appointments/${appointmentId}/confirm/`, {
     method: 'POST',
     body: JSON.stringify({ confirmation_code: confirmationCode }),
   });
@@ -161,7 +163,7 @@ async confirmAppointment(appointmentId: number, confirmationCode: string): Promi
 
   // Админ методы (опционально)
   async adminConfirmAppointment(appointmentId: number, authToken: string): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/appointments/${appointmentId}/admin_confirm/`, {
+    return this.request<{ message: string }>(`/api/appointments/${appointmentId}/admin_confirm/`, {
       method: 'POST',
       headers: {
         'Auth-Token': authToken,
@@ -170,7 +172,7 @@ async confirmAppointment(appointmentId: number, confirmationCode: string): Promi
   }
 
   async deleteAppointment(appointmentId: number, authToken: string): Promise<void> {
-    return this.request<void>(`/appointments/${appointmentId}/`, {
+    return this.request<void>(`/api/appointments/${appointmentId}/`, {
       method: 'DELETE',
       headers: {
         'Auth-Token': authToken,
@@ -185,7 +187,7 @@ async confirmAppointment(appointmentId: number, confirmationCode: string): Promi
     if (confirmed !== undefined) params.append('confirmed', confirmed.toString());
 
     const query = params.toString();
-    return this.request<Appointment[]>(`/appointments/${query ? `?${query}` : ''}`);
+    return this.request<Appointment[]>(`/api/appointments/${query ? `?${query}` : ''}`);
   }
 }
 
@@ -212,13 +214,15 @@ class AdminApiService {
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
     // Remove trailing slash if present
     const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
-    const apiUrl = cleanApiUrl.endsWith('/api') ? cleanApiUrl : `${cleanApiUrl}/api`;
     
-    const url = `${apiUrl}${endpoint}`;
+    // Ensure the endpoint starts with /
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    
+    const url = `${cleanApiUrl}${cleanEndpoint}`;
     
     const defaultOptions: RequestInit = {
       headers: {
@@ -320,11 +324,11 @@ class AdminApiService {
 
   // Customer management
   async getCustomers(): Promise<Customer[]> {
-    return this.request<Customer[]>('/customers/');
+    return this.request<Customer[]>('/api/customers/');
   }
 
   async updateCustomerStatus(phone: string, status: string): Promise<Customer> {
-    return this.request<Customer>(`/customers/${phone}/status/`, {
+    return this.request<Customer>(`/api/customers/${phone}/status/`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
     });
@@ -332,11 +336,11 @@ class AdminApiService {
 
   // Service management
   async getServices(): Promise<Service[]> {
-    return this.request<Service[]>('/services/');
+    return this.request<Service[]>('/api/services/');
   }
 
   async createService(service: { name: string }): Promise<Service> {
-    return this.request<Service>('/services/', {
+    return this.request<Service>('/api/services/', {
       method: 'POST',
       body: JSON.stringify(service)
     });
@@ -344,11 +348,11 @@ class AdminApiService {
 
   // Master management
   async getMasters(): Promise<Master[]> {
-    return this.request<Master[]>('/masters/');
+    return this.request<Master[]>('/api/masters/');
   }
 
   async createMaster(master: { name: string; phone: string }): Promise<Master> {
-    return this.request<Master>('/masters/', {
+    return this.request<Master>('/api/masters/', {
       method: 'POST',
       body: JSON.stringify(master)
     });
@@ -356,7 +360,7 @@ class AdminApiService {
 
   // Offering management
   async getOfferings(): Promise<Offering[]> {
-    return this.request<Offering[]>('/offerings/');
+    return this.request<Offering[]>('/api/offerings/');
   }
 
   async createOffering(offering: {
@@ -365,7 +369,7 @@ class AdminApiService {
     price: number;
     duration: string;
   }): Promise<Offering> {
-    return this.request<Offering>('/offerings/', {
+    return this.request<Offering>('/api/offerings/', {
       method: 'POST',
       body: JSON.stringify(offering)
     });
@@ -378,18 +382,18 @@ class AdminApiService {
     if (confirmed !== undefined) params.append('confirmed', confirmed.toString());
 
     const query = params.toString();
-    return this.request<Appointment[]>(`/appointments/${query ? `?${query}` : ''}`);
+    return this.request<Appointment[]>(`/api/appointments/${query ? `?${query}` : ''}`);
   }
 
   async deleteAppointment(appointmentId: number): Promise<void> {
-    return this.request<void>(`/appointments/${appointmentId}/`, {
+    return this.request<void>(`/api/appointments/${appointmentId}/`, {
       method: 'DELETE'
     });
   }
 
   async confirmAppointment(appointmentId: number): Promise<{ message: string }> {
     // This would be an admin confirmation endpoint
-    return this.request<{ message: string }>(`/appointments/${appointmentId}/admin_confirm/`, {
+    return this.request<{ message: string }>(`/api/appointments/${appointmentId}/admin_confirm/`, {
       method: 'POST'
     });
   }
