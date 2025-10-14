@@ -10,6 +10,8 @@ import { useBooking } from "@/hooks/useBooking";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { useToast } from "@/hooks/use-toast";
 
+import { formatPhoneNumber, isValidPhoneNumber } from "@/utils/phone";
+
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -128,18 +130,8 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
   };
 
   const handlePhoneChange = (value: string) => {
-    // Ensure phone always starts with + and cannot be removed
-    let formattedValue = value;
-    
-    // If user tries to remove +, add it back
-    if (!formattedValue.startsWith('+')) {
-      formattedValue = '+' + formattedValue.replace(/^\+*/, '');
-    }
-    
-    // Limit to 20 characters total
-    if (formattedValue.length > 20) {
-      formattedValue = formattedValue.substring(0, 20);
-    }
+    // Format the phone number
+    const formattedValue = formatPhoneNumber(value) || value;
     
     updateContactInfo(clientName, formattedValue);
   };
@@ -231,8 +223,8 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                     minLength={3}
                     maxLength={20}
                   />
-                  {clientPhone.length > 0 && (clientPhone.length < 3 || clientPhone.length > 20 || !clientPhone.startsWith('+')) && (
-                    <p className="text-sm text-red-500">Номер телефона должен начинаться с + и содержать от 3 до 20 символов</p>
+                  {clientPhone.length > 0 && !isValidPhoneNumber(clientPhone) && (
+                    <p className="text-sm text-red-500">Пожалуйста, введите корректный номер телефона (+7 или +996)</p>
                   )}
                 </div>
 

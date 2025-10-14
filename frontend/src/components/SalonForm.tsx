@@ -1,4 +1,4 @@
-import { useState } from "react";
+ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatPhoneNumber, isValidPhoneNumber } from "@/utils/phone";
 
 interface Salon {
   id: string;
@@ -100,6 +101,16 @@ export const SalonForm = ({ salon, onSave }: SalonFormProps) => {
       return;
     }
 
+    // Validate phone number if provided
+    if (formData.phone && !isValidPhoneNumber(formData.phone)) {
+      toast({
+        title: "Ошибка",
+        description: "Пожалуйста, введите корректный номер телефона (+7 или +996)",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (salon) {
       onSave({ ...formData, id: salon.id });
     } else {
@@ -132,8 +143,8 @@ export const SalonForm = ({ salon, onSave }: SalonFormProps) => {
           <Input
             id="phone"
             value={formData.phone}
-            onChange={(e) => handleInputChange("phone", e.target.value)}
-          placeholder="+996 (XXX) XXX-XXX"
+            onChange={(e) => handleInputChange("phone", formatPhoneNumber(e.target.value) || e.target.value)}
+            placeholder="+7 или +996XXXXXXXXX"
           />
         </div>
       </div>

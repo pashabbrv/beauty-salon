@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   nginx:
     build:
@@ -24,9 +22,8 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    environment:
-      - VITE_API_URL=http://172.20.10.2/api 
-      - VITE_ADMIN_TOKEN=your-secure-backend-token-here
+    env_file:
+      - .env
     restart: unless-stopped
     depends_on:
       - backend

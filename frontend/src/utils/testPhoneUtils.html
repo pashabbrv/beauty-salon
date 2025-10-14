@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Phone Utilities Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin-bottom: 30px; }
+        .test-result { margin: 5px 0; padding: 5px; border-radius: 3px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Phone Utilities Test</h1>
+    <div id="results"></div>
+
+    <script type="module">
+        // Import the phone utilities
+        import { formatPhoneNumber, isValidPhoneNumber, formatPhoneForDisplay } from './phone.js';
+        
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(message, isSuccess = true) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${isSuccess ? 'success' : 'error'}`;
+            resultDiv.textContent = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        // Test formatPhoneNumber
+        addResult('--- Testing formatPhoneNumber ---', false);
+        const testNumbers = [
+            '89123456789',
+            '+79123456789',
+            '79123456789',
+            '0700123456',
+            '+996700123456',
+            '996700123456',
+            '',
+            '123'
+        ];
+        
+        testNumbers.forEach(number => {
+            try {
+                const result = formatPhoneNumber(number);
+                addResult(`formatPhoneNumber('${number}') => ${result}`);
+            } catch (e) {
+                addResult(`formatPhoneNumber('${number}') => ERROR: ${e.message}`, false);
+            }
+        });
+        
+        // Test isValidPhoneNumber
+        addResult('--- Testing isValidPhoneNumber ---', false);
+        const validNumbers = [
+            '+79123456789',
+            '+71234567890',
+            '+996700123456',
+            '+996555123456'
+        ];
+        
+        const invalidNumbers = [
+            '',
+            '123',
+            '+7912345678', // Too short
+            '+791234567890', // Too long
+            '+99670012345', // Too short
+            '+9967001234567', // Too long
+            '79123456789' // Missing +
+        ];
+        
+        validNumbers.forEach(number => {
+            try {
+                const result = isValidPhoneNumber(number);
+                addResult(`isValidPhoneNumber('${number}') => ${result}`);
+            } catch (e) {
+                addResult(`isValidPhoneNumber('${number}') => ERROR: ${e.message}`, false);
+            }
+        });
+        
+        invalidNumbers.forEach(number => {
+            try {
+                const result = isValidPhoneNumber(number);
+                addResult(`isValidPhoneNumber('${number}') => ${result}`);
+            } catch (e) {
+                addResult(`isValidPhoneNumber('${number}') => ERROR: ${e.message}`, false);
+            }
+        });
+        
+        // Test formatPhoneForDisplay
+        addResult('--- Testing formatPhoneForDisplay ---', false);
+        const displayNumbers = [
+            '+79123456789',
+            '+996700123456',
+            '+1234567890',
+            ''
+        ];
+        
+        displayNumbers.forEach(number => {
+            try {
+                const result = formatPhoneForDisplay(number);
+                addResult(`formatPhoneForDisplay('${number}') => ${result}`);
+            } catch (e) {
+                addResult(`formatPhoneForDisplay('${number}') => ERROR: ${e.message}`, false);
+            }
+        });
+        
+        addResult('Validation complete.', false);
+    </script>
+</body>
+</html>

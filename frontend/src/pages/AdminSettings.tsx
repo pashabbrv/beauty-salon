@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,20 +6,47 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
+import { formatPhoneNumber, isValidPhoneNumber } from '@/utils/phone';
+
+// Define the settings interface
+interface SalonSettings {
+  salonName: string;
+  salonAddress: string;
+  salonPhone: string;
+  salonDescription: string;
+  notificationsEnabled: boolean;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+}
+
+// Default settings
+const DEFAULT_SETTINGS: SalonSettings = {
+  salonName: 'Beauty Salon',
+  salonAddress: 'г. Бишкек, пр. Чуй, 168',
+  salonPhone: '+996 (312) 62-45-67',
+  salonDescription: 'Ваша красота - наша страсть',
+  notificationsEnabled: true,
+  emailNotifications: true,
+  smsNotifications: true,
+};
 
 export default function AdminSettings() {
   const { toast } = useToast();
-  const [settings, setSettings] = useState({
-    salonName: 'Салон красоты',
-    salonAddress: 'г. Бишкек, ул. Чуй, 123',
-    salonPhone: '+996 (555) 123-456',
-    salonDescription: 'Современный салон красоты с полным спектром услуг',
-    notificationsEnabled: true,
-    emailNotifications: true,
-    smsNotifications: true,
-  });
+  const [settings, setSettings] = useState<SalonSettings>(DEFAULT_SETTINGS);
 
-  const handleChange = (field: string, value: string | boolean) => {
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('salonSettings');
+    if (savedSettings) {
+      try {
+        setSettings(JSON.parse(savedSettings));
+      } catch (e) {
+        console.error('Failed to parse saved settings', e);
+      }
+    }
+  }, []);
+
+  const handleChange = (field: keyof SalonSettings, value: string | boolean) => {
     setSettings(prev => ({
       ...prev,
       [field]: value
@@ -27,7 +54,19 @@ export default function AdminSettings() {
   };
 
   const handleSave = () => {
-    // In a real app, this would save to the backend
+    // Validate phone number if provided
+    if (settings.salonPhone && !isValidPhoneNumber(settings.salonPhone)) {
+      toast({
+        title: 'Ошибка',
+        description: 'Пожалуйста, введите корректный номер телефона (+7 или +996)',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Save settings to localStorage
+    localStorage.setItem('salonSettings', JSON.stringify(settings));
+    
     toast({
       title: 'Настройки сохранены',
       description: 'Ваши настройки успешно сохранены',
@@ -73,7 +112,8 @@ export default function AdminSettings() {
               <Input
                 id="salon-phone"
                 value={settings.salonPhone}
-                onChange={(e) => handleChange('salonPhone', e.target.value)}
+                onChange={(e) => handleChange('salonPhone', formatPhoneNumber(e.target.value) || e.target.value)}
+                placeholder="+7 или +996XXXXXXXXX"
               />
             </div>
             <div className="space-y-2">

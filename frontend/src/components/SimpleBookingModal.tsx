@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, User, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatPhoneNumber, isValidPhoneNumber } from "@/utils/phone";
 
 interface SimpleBookingModalProps {
   isOpen: boolean;
@@ -17,29 +18,18 @@ const SimpleBookingModal = ({ isOpen, onClose }: SimpleBookingModalProps) => {
   const { toast } = useToast();
 
   const handlePhoneChange = (value: string) => {
-    // Ensure phone always starts with + and cannot be removed
-    let formattedValue = value;
-    
-    // If user tries to remove +, add it back
-    if (!formattedValue.startsWith('+')) {
-      formattedValue = '+' + formattedValue.replace(/^\+*/, '');
-    }
-    
-    // Limit to 20 characters total
-    if (formattedValue.length > 20) {
-      formattedValue = formattedValue.substring(0, 20);
-    }
-    
+    // Format the phone number
+    const formattedValue = formatPhoneNumber(value) || value;
     setPhone(formattedValue);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !phone.trim()) {
+    if (!name.trim() || !phone.trim() || !isValidPhoneNumber(phone)) {
       toast({
         title: "Ошибка",
-        description: "Пожалуйста, заполните все поля",
+        description: "Пожалуйста, введите корректный номер телефона (+7 или +996)",
         variant: "destructive",
       });
       return;

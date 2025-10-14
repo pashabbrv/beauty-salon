@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, Sparkles, Menu } from "lucide-react";
 
 interface NavigationProps {
   onNavigate?: (sectionRef: React.RefObject<HTMLDivElement>) => void;
   onBookingClick?: () => void;
   refs?: {
     services: React.RefObject<HTMLDivElement>;
-    masters: React.RefObject<HTMLDivElement>;
+    masters?: React.RefObject<HTMLDivElement>;
     contacts: React.RefObject<HTMLDivElement>;
   };
 }
@@ -16,8 +15,8 @@ const Navigation = ({ onNavigate, onBookingClick, refs }: NavigationProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleNavClick = (refKey: keyof typeof refs) => {
-    if (refs && onNavigate) {
-      onNavigate(refs[refKey]);
+    if (refs && onNavigate && refs[refKey]) {
+      onNavigate(refs[refKey] as React.RefObject<HTMLDivElement>);
     }
     setIsMenuOpen(false);
   };
@@ -29,7 +28,7 @@ const Navigation = ({ onNavigate, onBookingClick, refs }: NavigationProps) => {
           {/* Logo */}
           <div className="flex items-center space-x-2">
             <div className="bg-gradient-primary p-2 rounded-full">
-              <Sparkles className="w-6 h-6 text-white" />
+              <div className="w-6 h-6 text-white">✨</div>
             </div>
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Beauty Salon
@@ -39,23 +38,22 @@ const Navigation = ({ onNavigate, onBookingClick, refs }: NavigationProps) => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex space-x-8">
             <Button 
-              variant="ghost" 
               onClick={() => handleNavClick('services')}
-              className="text-foreground/80 hover:text-foreground hover:bg-foreground/5"
+              className="text-foreground/80 hover:text-foreground hover:bg-foreground/5 bg-transparent"
             >
               Услуги
             </Button>
+            {refs?.masters && (
+              <Button 
+                onClick={() => handleNavClick('masters')}
+                className="text-foreground/80 hover:text-foreground hover:bg-foreground/5 bg-transparent"
+              >
+                Мастера
+              </Button>
+            )}
             <Button 
-              variant="ghost" 
-              onClick={() => handleNavClick('masters')}
-              className="text-foreground/80 hover:text-foreground hover:bg-foreground/5"
-            >
-              Мастера
-            </Button>
-            <Button 
-              variant="ghost" 
               onClick={() => handleNavClick('contacts')}
-              className="text-foreground/80 hover:text-foreground hover:bg-foreground/5"
+              className="text-foreground/80 hover:text-foreground hover:bg-foreground/5 bg-transparent"
             >
               Контакты
             </Button>
@@ -64,22 +62,19 @@ const Navigation = ({ onNavigate, onBookingClick, refs }: NavigationProps) => {
           {/* CTA Button */}
           <div className="hidden md:flex items-center">
             <Button 
-              className="bg-gradient-primary text-white border-0 hover:opacity-90"
               onClick={onBookingClick}
+              className="bg-gradient-primary text-white border-0 hover:opacity-90"
             >
-              <Calendar className="w-4 h-4 mr-2" />
-              Записаться
+              📅 Записаться
             </Button>
           </div>
 
           {/* Mobile Menu Toggle */}
           <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden"
+            className="md:hidden bg-transparent hover:bg-accent"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            <Menu className="w-5 h-5" />
+            <div className="w-5 h-5">☰</div>
           </Button>
         </div>
 
@@ -91,41 +86,39 @@ const Navigation = ({ onNavigate, onBookingClick, refs }: NavigationProps) => {
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <div className="flex items-center space-x-2">
                   <div className="bg-gradient-primary p-2 rounded-full">
-                    <Sparkles className="w-6 h-6 text-white" />
+                    <div className="w-6 h-6 text-white">✨</div>
                   </div>
                   <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                     Beauty Salon
                   </span>
                 </div>
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  className="bg-transparent hover:bg-accent"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  <Menu className="w-5 h-5" />
+                  <div className="w-5 h-5">☰</div>
                 </Button>
               </div>
 
               {/* Mobile Menu Items */}
               <div className="flex-1 p-4 space-y-4">
                 <Button 
-                  variant="ghost" 
                   onClick={() => handleNavClick('services')}
-                  className="w-full justify-start text-lg h-12 text-foreground/80 hover:text-foreground hover:bg-foreground/5"
+                  className="w-full justify-start text-lg h-12 text-foreground/80 hover:text-foreground hover:bg-foreground/5 bg-transparent"
                 >
                   Услуги
                 </Button>
+                {refs?.masters && (
+                  <Button 
+                    onClick={() => handleNavClick('masters')}
+                    className="w-full justify-start text-lg h-12 text-foreground/80 hover:text-foreground hover:bg-foreground/5 bg-transparent"
+                  >
+                    Мастера
+                  </Button>
+                )}
                 <Button 
-                  variant="ghost" 
-                  onClick={() => handleNavClick('masters')}
-                  className="w-full justify-start text-lg h-12 text-foreground/80 hover:text-foreground hover:bg-foreground/5"
-                >
-                  Мастера
-                </Button>
-                <Button 
-                  variant="ghost" 
                   onClick={() => handleNavClick('contacts')}
-                  className="w-full justify-start text-lg h-12 text-foreground/80 hover:text-foreground hover:bg-foreground/5"
+                  className="w-full justify-start text-lg h-12 text-foreground/80 hover:text-foreground hover:bg-foreground/5 bg-transparent"
                 >
                   Контакты
                 </Button>
@@ -140,8 +133,7 @@ const Navigation = ({ onNavigate, onBookingClick, refs }: NavigationProps) => {
                     onBookingClick?.();
                   }}
                 >
-                  <Calendar className="w-5 h-5 mr-2" />
-                  Записаться
+                  📅 Записаться
                 </Button>
               </div>
             </div>

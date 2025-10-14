@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { adminApiService, Service, Master, Offering } from '@/services/api';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { formatPhoneNumber, isValidPhoneNumber } from '@/utils/phone';
 
 export default function AdminContent() {
   const [services, setServices] = useState<Service[]>([]);
@@ -74,10 +75,17 @@ export default function AdminContent() {
   const handleCreateMaster = async () => {
     if (!newMasterName.trim() || !newMasterPhone.trim()) return;
     
+    // Format and validate phone number
+    const formattedPhone = formatPhoneNumber(newMasterPhone);
+    if (!formattedPhone || !isValidPhoneNumber(formattedPhone)) {
+      alert('Пожалуйста, введите корректный номер телефона (+7 или +996)');
+      return;
+    }
+    
     try {
       const newMaster = await adminApiService.createMaster({ 
         name: newMasterName, 
-        phone: newMasterPhone 
+        phone: formattedPhone
       });
       setMasters([...masters, newMaster]);
       setNewMasterName('');
@@ -103,6 +111,38 @@ export default function AdminContent() {
       setIsOfferingDialogOpen(false);
     } catch (error) {
       console.error('Failed to create offering:', error);
+    }
+  };
+
+  // Add delete service function
+  const handleDeleteService = async (serviceId: number, serviceName: string) => {
+    if (!window.confirm(`Вы уверены, что хотите удалить услугу "${serviceName}"?`)) {
+      return;
+    }
+    
+    try {
+      await adminApiService.deleteService(serviceId);
+      setServices(services.filter(service => service.id !== serviceId));
+      alert('Услуга удалена успешно!');
+    } catch (error) {
+      console.error('Failed to delete service:', error);
+      alert('Ошибка при удалении услуги');
+    }
+  };
+
+  // Add delete master function
+  const handleDeleteMaster = async (masterId: number, masterName: string) => {
+    if (!window.confirm(`Вы уверены, что хотите удалить мастера "${masterName}"?`)) {
+      return;
+    }
+    
+    try {
+      await adminApiService.deleteMaster(masterId);
+      setMasters(masters.filter(master => master.id !== masterId));
+      alert('Мастер удален успешно!');
+    } catch (error) {
+      console.error('Failed to delete master:', error);
+      alert('Ошибка при удалении мастера');
     }
   };
 
@@ -195,7 +235,7 @@ export default function AdminContent() {
                         <Button variant="ghost" size="sm">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteService(service.id, service.name)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -254,7 +294,7 @@ export default function AdminContent() {
                             id="master-phone"
                             value={newMasterPhone}
                             onChange={(e) => setNewMasterPhone(e.target.value)}
-                            placeholder="Номер телефона"
+                            placeholder="+7 или +996XXXXXXXXX"
                           />
                         </div>
                       </div>
@@ -291,7 +331,7 @@ export default function AdminContent() {
                         <Button variant="ghost" size="sm">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteMaster(master.id, master.name)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>

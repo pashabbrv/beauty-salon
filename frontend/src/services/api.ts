@@ -6,6 +6,7 @@ export interface Service {
 export interface Master {
   id: number;
   name: string;
+  phone: string;
   specialization?: string;
   rating?: number;
   avatar?: string;
@@ -73,7 +74,7 @@ export interface AuthResponse {
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://10.25.46.176';
 
     // Remove trailing slash if present
     const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
@@ -123,14 +124,17 @@ class ApiService {
   }
 
   // Шаг 3: Получить офферинги по услуге
-  async getOfferings(serviceId: number, masterId?: number): Promise<Offering[]> {
+  async getOfferings(serviceId?: number, masterId?: number): Promise<Offering[]> {
     const params = new URLSearchParams();
-    params.append('service_id', serviceId.toString());
+    if (serviceId) {
+      params.append('service_id', serviceId.toString());
+    }
     if (masterId) {
       params.append('master_id', masterId.toString());
     }
 
-    return this.request<Offering[]>(`/offerings/?${params.toString()}`);
+    const queryString = params.toString();
+    return this.request<Offering[]>(`/offerings/${queryString ? `?${queryString}` : ''}`);
   }
 
   // Шаг 4: Получить доступные слоты времени
@@ -214,7 +218,7 @@ class AdminApiService {
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://10.25.46.176';
 
     // Remove trailing slash if present
     const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
@@ -346,6 +350,13 @@ class AdminApiService {
     });
   }
 
+  // Add delete service method
+  async deleteService(serviceId: number): Promise<void> {
+    return this.request<void>(`/services/${serviceId}/`, {
+      method: 'DELETE'
+    });
+  }
+
   // Master management
   async getMasters(): Promise<Master[]> {
     return this.request<Master[]>('/masters/');
@@ -355,6 +366,13 @@ class AdminApiService {
     return this.request<Master>('/masters/', {
       method: 'POST',
       body: JSON.stringify(master)
+    });
+  }
+
+  // Add delete master method
+  async deleteMaster(masterId: number): Promise<void> {
+    return this.request<void>(`/masters/${masterId}/`, {
+      method: 'DELETE'
     });
   }
 
