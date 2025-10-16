@@ -93,13 +93,13 @@ class Appointment(Base):
     id: Mapped[int_pk]
     name: Mapped[str] = mapped_column(String(100))
     customer_id: Mapped[int] = mapped_column(
-        ForeignKey('customers.id', ondelete='SET NULL')
+        ForeignKey('customers.id', ondelete='SET NULL'), nullable=True
     )
     offering_id: Mapped[int] = mapped_column(
-        ForeignKey('offerings.id', ondelete='SET NULL')
+        ForeignKey('offerings.id', ondelete='SET NULL'), nullable=True
     )
     occupation_id: Mapped[int] = mapped_column(
-        ForeignKey('occupations.id', ondelete='SET NULL')
+        ForeignKey('occupations.id', ondelete='SET NULL'), nullable=True
     )
     confirmed: Mapped[bool] = mapped_column(default=False)
     secret_code: Mapped[str] = mapped_column(String(8))
