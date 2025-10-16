@@ -35,7 +35,9 @@ class Master(Base):
 
     # Отношения с другими ORM
     offerings: Mapped[list['Offering']] = relationship(
-        back_populates='master'
+        back_populates='master',
+        cascade="all, delete-orphan",
+        passive_deletes=True
     )
 
 
@@ -48,7 +50,9 @@ class Service(Base):
 
     # Отношения с другими ORM
     offerings: Mapped[list['Offering']] = relationship(
-        back_populates='service'
+        back_populates='service',
+        cascade='all, delete-orphan',
+        passive_deletes=True
     )
 
 
