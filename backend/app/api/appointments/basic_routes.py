@@ -1,4 +1,5 @@
 import secrets
+import logging
 from datetime import date, timedelta
 from fastapi import (
     APIRouter, status, Body, Query, Path, Depends, HTTPException
@@ -18,6 +19,8 @@ from ws.appointments.notifications import ws_appointments_manager
 
 
 basic_router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 @basic_router.get(
@@ -165,9 +168,9 @@ async def create_new_appointment(
                 'code': new_appointment.secret_code
             }
         })
-        print(f"[DEBUG] WebSocket broadcast result: {result}, phone: {new_appointment.phone}, code: {new_appointment.secret_code}")
+        logger.debug(f"[DEBUG] WebSocket broadcast result: {result}, phone: {new_appointment.phone}, code: {new_appointment.secret_code}")
     except Exception as e:
-        print(f"[ERROR] WebSocket broadcast failed: {e}")
+        logger.error(f"[ERROR] WebSocket broadcast failed: {e}")
     
     return new_appointment
 
