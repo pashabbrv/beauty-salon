@@ -3,7 +3,7 @@ import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
 import ServicesSection from "@/components/ServicesSection";
 import BookingModal from "@/components/BookingModal";
-import { apiService, Service, Offering } from "@/services/api";
+import { apiService, Service } from "@/services/api";
 
 // Define the settings interface
 interface SalonSettings {
@@ -37,8 +37,8 @@ const Index = () => {
   const contactsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Fetch only services that have offerings
-    fetchAvailableServices();
+    // Fetch all services
+    fetchAllServices();
     
     // Load settings from localStorage
     loadSettings();
@@ -55,25 +55,15 @@ const Index = () => {
     }
   };
 
-  const fetchAvailableServices = async () => {
+  const fetchAllServices = async () => {
     try {
-      // First get all services
+      // Get all services from the database
       const allServices = await apiService.getServices();
-      
-      // Then get all offerings to see which services are actually offered
-      const offerings = await apiService.getOfferings();
-      
-      // Get unique service IDs that have offerings
-      const offeredServiceIds = [...new Set(offerings.map(o => o.service.id))];
-      
-      // Filter services to only include those that have offerings
-      const servicesWithOfferings = allServices.filter(service => 
-        offeredServiceIds.includes(service.id)
-      );
-      
-      setAvailableServices(servicesWithOfferings);
+      setAvailableServices(allServices);
     } catch (error) {
-      console.error("Failed to fetch available services:", error);
+      console.error("Failed to fetch services:", error);
+      // Set to empty array to show empty state
+      setAvailableServices([]);
     }
   };
 
