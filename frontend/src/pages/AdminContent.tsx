@@ -21,6 +21,11 @@ export default function AdminContent() {
   const [isMasterDialogOpen, setIsMasterDialogOpen] = useState(false);
   const [isOfferingDialogOpen, setIsOfferingDialogOpen] = useState(false);
   
+  // Edit states
+  const [isEditServiceDialogOpen, setIsEditServiceDialogOpen] = useState(false);
+  const [isEditMasterDialogOpen, setIsEditMasterDialogOpen] = useState(false);
+  const [isEditOfferingDialogOpen, setIsEditOfferingDialogOpen] = useState(false);
+  
   const [newServiceName, setNewServiceName] = useState('');
   const [newMasterName, setNewMasterName] = useState('');
   const [newMasterPhone, setNewMasterPhone] = useState('');
@@ -31,6 +36,21 @@ export default function AdminContent() {
     price: number;
     duration: string;
   }>({
+    master_id: 0,
+    service_id: 0,
+    price: 0,
+    duration: '01:00:00'
+  });
+  
+  // Edit states
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [editingMaster, setEditingMaster] = useState<Master | null>(null);
+  const [editingOffering, setEditingOffering] = useState<Offering | null>(null);
+  
+  const [editServiceName, setEditServiceName] = useState('');
+  const [editMasterName, setEditMasterName] = useState('');
+  const [editMasterPhone, setEditMasterPhone] = useState('');
+  const [editOfferingData, setEditOfferingData] = useState({
     master_id: 0,
     service_id: 0,
     price: 0,
@@ -111,6 +131,92 @@ export default function AdminContent() {
       setIsOfferingDialogOpen(false);
     } catch (error) {
       console.error('Failed to create offering:', error);
+    }
+  };
+
+  // Edit handlers
+  const handleEditService = (service: Service) => {
+    setEditingService(service);
+    setEditServiceName(service.name);
+    setIsEditServiceDialogOpen(true);
+  };
+
+  const handleEditMaster = (master: Master) => {
+    setEditingMaster(master);
+    setEditMasterName(master.name);
+    setEditMasterPhone(master.phone);
+    setIsEditMasterDialogOpen(true);
+  };
+
+  const handleEditOffering = (offering: Offering) => {
+    setEditingOffering(offering);
+    setEditOfferingData({
+      master_id: offering.master.id,
+      service_id: offering.service.id,
+      price: offering.price,
+      duration: offering.duration
+    });
+    setIsEditOfferingDialogOpen(true);
+  };
+
+  const handleUpdateService = async () => {
+    if (!editingService || !editServiceName.trim()) return;
+    
+    try {
+      const updatedService = await adminApiService.updateService(editingService.id, { name: editServiceName });
+      setServices(services.map(service => 
+        service.id === updatedService.id ? updatedService : service
+      ));
+      setIsEditServiceDialogOpen(false);
+      setEditingService(null);
+      alert('Услуга успешно обновлена!');
+    } catch (error) {
+      console.error('Failed to update service:', error);
+      alert('Ошибка при обновлении услуги');
+    }
+  };
+
+  const handleUpdateMaster = async () => {
+    if (!editingMaster || !editMasterName.trim() || !editMasterPhone.trim()) return;
+    
+    // Format and validate phone number
+    const formattedPhone = formatPhoneNumber(editMasterPhone);
+    if (!formattedPhone || !isValidPhoneNumber(formattedPhone)) {
+      alert('Пожалуйста, введите корректный номер телефона (+7 или +996)');
+      return;
+    }
+    
+    try {
+      const updatedMaster = await adminApiService.updateMaster(editingMaster.id, { 
+        name: editMasterName, 
+        phone: formattedPhone 
+      });
+      setMasters(masters.map(master => 
+        master.id === updatedMaster.id ? updatedMaster : master
+      ));
+      setIsEditMasterDialogOpen(false);
+      setEditingMaster(null);
+      alert('Мастер успешно обновлен!');
+    } catch (error) {
+      console.error('Failed to update master:', error);
+      alert('Ошибка при обновлении мастера');
+    }
+  };
+
+  const handleUpdateOffering = async () => {
+    if (!editingOffering || !editOfferingData.master_id || !editOfferingData.service_id || editOfferingData.price <= 0) return;
+    
+    try {
+      const updatedOffering = await adminApiService.updateOffering(editingOffering.id, editOfferingData);
+      setOfferings(offerings.map(offering => 
+        offering.id === updatedOffering.id ? updatedOffering : offering
+      ));
+      setIsEditOfferingDialogOpen(false);
+      setEditingOffering(null);
+      alert('Предложение успешно обновлено!');
+    } catch (error) {
+      console.error('Failed to update offering:', error);
+      alert('Ошибка при обновлении предложения');
     }
   };
 
@@ -232,7 +338,7 @@ export default function AdminContent() {
                       <TableCell className="font-medium">{service.id}</TableCell>
                       <TableCell>{service.name}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditService(service)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteService(service.id, service.name)}>
@@ -328,7 +434,7 @@ export default function AdminContent() {
                       <TableCell>{master.name}</TableCell>
                       <TableCell>{master.phone}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditMaster(master)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteMaster(master.id, master.name)}>
@@ -482,7 +588,7 @@ export default function AdminContent() {
                       <TableCell>{offering.price} сом</TableCell>
                       <TableCell>{offering.duration}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditOffering(offering)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm">
@@ -497,6 +603,191 @@ export default function AdminContent() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Service Dialog */}
+      <Dialog open={isEditServiceDialogOpen} onOpenChange={setIsEditServiceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать услугу</DialogTitle>
+            <DialogDescription>
+              Измените название услуги
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-service-name" className="text-right">
+                Название
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-service-name"
+                  value={editServiceName}
+                  onChange={(e) => setEditServiceName(e.target.value)}
+                  placeholder="Название услуги"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditServiceDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleUpdateService}>
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Master Dialog */}
+      <Dialog open={isEditMasterDialogOpen} onOpenChange={setIsEditMasterDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать мастера</DialogTitle>
+            <DialogDescription>
+              Измените информацию о мастере
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-master-name" className="text-right">
+                Имя
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-master-name"
+                  value={editMasterName}
+                  onChange={(e) => setEditMasterName(e.target.value)}
+                  placeholder="Имя мастера"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-master-phone" className="text-right">
+                Телефон
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-master-phone"
+                  value={editMasterPhone}
+                  onChange={(e) => setEditMasterPhone(e.target.value)}
+                  placeholder="+7 или +996XXXXXXXXX"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditMasterDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleUpdateMaster}>
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Offering Dialog */}
+      <Dialog open={isEditOfferingDialogOpen} onOpenChange={setIsEditOfferingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать предложение</DialogTitle>
+            <DialogDescription>
+              Измените информацию о предложении
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-offering-master" className="text-right">
+                Мастер
+              </Label>
+              <div className="col-span-3">
+                <select
+                  id="edit-offering-master"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={editOfferingData.master_id}
+                  onChange={(e) => setEditOfferingData({
+                    ...editOfferingData,
+                    master_id: parseInt(e.target.value)
+                  })}
+                >
+                  <option value="0">Выберите мастера</option>
+                  {masters.map(master => (
+                    <option key={master.id} value={master.id}>
+                      {master.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-offering-service" className="text-right">
+                Услуга
+              </Label>
+              <div className="col-span-3">
+                <select
+                  id="edit-offering-service"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={editOfferingData.service_id}
+                  onChange={(e) => setEditOfferingData({
+                    ...editOfferingData,
+                    service_id: parseInt(e.target.value)
+                  })}
+                >
+                  <option value="0">Выберите услугу</option>
+                  {services.map(service => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-offering-price" className="text-right">
+                Цена
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-offering-price"
+                  type="number"
+                  value={editOfferingData.price || ''}
+                  onChange={(e) => setEditOfferingData({
+                    ...editOfferingData,
+                    price: parseInt(e.target.value) || 0
+                  })}
+                  placeholder="Цена"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-offering-duration" className="text-right">
+                Длительность
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-offering-duration"
+                  type="text"
+                  value={editOfferingData.duration}
+                  onChange={(e) => setEditOfferingData({
+                    ...editOfferingData,
+                    duration: e.target.value
+                  })}
+                  placeholder="ЧЧ:ММ:СС"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOfferingDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleUpdateOffering}>
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

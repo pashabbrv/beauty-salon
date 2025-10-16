@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
 import { formatPhoneNumber, isValidPhoneNumber } from '@/utils/phone';
 
@@ -14,9 +13,6 @@ interface SalonSettings {
   salonAddress: string;
   salonPhone: string;
   salonDescription: string;
-  notificationsEnabled: boolean;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
 }
 
 // Default settings
@@ -25,9 +21,6 @@ const DEFAULT_SETTINGS: SalonSettings = {
   salonAddress: 'г. Бишкек, пр. Чуй, 168',
   salonPhone: '+996 (312) 62-45-67',
   salonDescription: 'Ваша красота - наша страсть',
-  notificationsEnabled: true,
-  emailNotifications: true,
-  smsNotifications: true,
 };
 
 export default function AdminSettings() {
@@ -46,7 +39,7 @@ export default function AdminSettings() {
     }
   }, []);
 
-  const handleChange = (field: keyof SalonSettings, value: string | boolean) => {
+  const handleChange = (field: keyof SalonSettings, value: string) => {
     setSettings(prev => ({
       ...prev,
       [field]: value
@@ -82,7 +75,7 @@ export default function AdminSettings() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Информация о салоне</CardTitle>
@@ -127,90 +120,7 @@ export default function AdminSettings() {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Уведомления</CardTitle>
-            <CardDescription>
-              Настройки уведомлений для клиентов
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Уведомления</Label>
-                <p className="text-sm text-muted-foreground">
-                  Включить или отключить уведомления
-                </p>
-              </div>
-              <Switch
-                checked={settings.notificationsEnabled}
-                onCheckedChange={(checked) => handleChange('notificationsEnabled', checked)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>Email уведомления</Label>
-                <p className="text-sm text-muted-foreground">
-                  Отправлять уведомления по электронной почте
-                </p>
-              </div>
-              <Switch
-                checked={settings.emailNotifications}
-                onCheckedChange={(checked) => handleChange('emailNotifications', checked)}
-                disabled={!settings.notificationsEnabled}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>SMS уведомления</Label>
-                <p className="text-sm text-muted-foreground">
-                  Отправлять уведомления по SMS
-                </p>
-              </div>
-              <Switch
-                checked={settings.smsNotifications}
-                onCheckedChange={(checked) => handleChange('smsNotifications', checked)}
-                disabled={!settings.notificationsEnabled}
-              />
-            </div>
-          </CardContent>
-        </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Безопасность</CardTitle>
-          <CardDescription>
-            Настройки безопасности и доступа
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Текущий пароль</Label>
-              <Input
-                id="current-password"
-                type="password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">Новый пароль</Label>
-              <Input
-                id="new-password"
-                type="password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Подтвердите пароль</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="flex justify-end">
         <Button onClick={handleSave}>

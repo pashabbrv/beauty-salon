@@ -350,6 +350,14 @@ class AdminApiService {
     });
   }
 
+  // Add update service method
+  async updateService(serviceId: number, service: { name: string }): Promise<Service> {
+    return this.request<Service>(`/services/${serviceId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(service)
+    });
+  }
+
   // Add delete service method
   async deleteService(serviceId: number): Promise<void> {
     return this.request<void>(`/services/${serviceId}/`, {
@@ -365,6 +373,14 @@ class AdminApiService {
   async createMaster(master: { name: string; phone: string }): Promise<Master> {
     return this.request<Master>('/masters/', {
       method: 'POST',
+      body: JSON.stringify(master)
+    });
+  }
+
+  // Add update master method
+  async updateMaster(masterId: number, master: { name: string; phone: string }): Promise<Master> {
+    return this.request<Master>(`/masters/${masterId}/`, {
+      method: 'PUT',
       body: JSON.stringify(master)
     });
   }
@@ -390,6 +406,26 @@ class AdminApiService {
     return this.request<Offering>('/offerings/', {
       method: 'POST',
       body: JSON.stringify(offering)
+    });
+  }
+
+  // Add update offering method
+  async updateOffering(offeringId: number, offering: {
+    master_id: number;
+    service_id: number;
+    price: number;
+    duration: string;
+  }): Promise<Offering> {
+    return this.request<Offering>(`/offerings/${offeringId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(offering)
+    });
+  }
+
+  // Add delete offering method
+  async deleteOffering(offeringId: number): Promise<void> {
+    return this.request<void>(`/offerings/${offeringId}/`, {
+      method: 'DELETE'
     });
   }
 
