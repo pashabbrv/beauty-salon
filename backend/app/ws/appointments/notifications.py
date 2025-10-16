@@ -5,11 +5,10 @@ from fastapi import (
 from typing import Annotated
 
 from core.auth import verify_token_bool
-from ..connection_manager import ConnectionManager
+from ..connection_manager import ws_appointments_manager
 
 
 notifications_router = APIRouter()
-ws_appointments_manager = ConnectionManager()
 
 
 @notifications_router.websocket('/notifications/')

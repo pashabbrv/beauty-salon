@@ -50,3 +50,6 @@ class ConnectionManager:
         for connection in disconnected_connections:
             self.disconnect(connection)
         return result
+
+
+ws_appointments_manager = ConnectionManager()

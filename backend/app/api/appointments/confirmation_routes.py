@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, status, Body, Path, Depends, HTTPException
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,7 @@ from ws.appointments.notifications import ws_appointments_manager
 
 
 confirmation_router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @confirmation_router.post(
@@ -30,20 +32,38 @@ async def refresh_confirmation_code(
             detail='Appointment with such id doesn\'t exist'
         )
     
-    result = await ws_appointments_manager.broadcast({
-        'message': 'confirmation',
-        'detail': {
-            'phone': appointment.phone,
-            'code': appointment.secret_code
-        }
-    })
+    if not ws_appointments_manager.active_connections:
+        logger.warning('No WebSocket connections available')
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Cannot send code to notificating devices'
+        )
+    
+    try:
+        result = await ws_appointments_manager.broadcast({
+            'message': 'confirmation',
+            'detail': {
+                'phone': appointment.phone,
+                'code': appointment.secret_code
+            }
+        })
 
-    if result:
-        return {'message': 'OK'}
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail='Cannot send code to notificating devices'
-    )
+        if result:
+            return {'message': 'OK'}
+        else:
+            logger.warning('Broadcast failed for all connections')
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail='Cannot send code to notificating devices'
+            )
+            
+    except Exception as e:
+        logger.error(f'Broadcast error: {e}')
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Cannot send code to notificating devices'
+        )
+    
 
 
 @confirmation_router.post(
