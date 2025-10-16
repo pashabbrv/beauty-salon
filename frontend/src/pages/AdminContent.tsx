@@ -229,6 +229,9 @@ export default function AdminContent() {
     try {
       await adminApiService.deleteService(serviceId);
       setServices(services.filter(service => service.id !== serviceId));
+      // Refresh offerings to remove any offerings associated with the deleted service
+      const updatedOfferings = await adminApiService.getOfferings();
+      setOfferings(updatedOfferings);
       alert('Услуга удалена успешно!');
     } catch (error) {
       console.error('Failed to delete service:', error);
@@ -245,6 +248,9 @@ export default function AdminContent() {
     try {
       await adminApiService.deleteMaster(masterId);
       setMasters(masters.filter(master => master.id !== masterId));
+      // Refresh offerings to remove any offerings associated with the deleted master
+      const updatedOfferings = await adminApiService.getOfferings();
+      setOfferings(updatedOfferings);
       alert('Мастер удален успешно!');
     } catch (error) {
       console.error('Failed to delete master:', error);
