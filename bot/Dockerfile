@@ -8,7 +8,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the bot package and storage
 COPY bot ./bot
-COPY bot_storage.db ./bot_storage.db
 
 # Run the bot
 CMD ["python", "-m", "bot.bot"]

@@ -1,9 +1,9 @@
 import secrets
 import logging
+import json
 from datetime import date, timedelta
-from fastapi import (
-    APIRouter, status, Body, Query, Path, Depends, HTTPException
-)
+from fastapi import status, Body, Query, Path, Depends, HTTPException
+from faststream.rabbit.fastapi import RabbitRouter
 from sqlalchemy import select, insert, delete
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,10 +15,10 @@ from core.schemas import AppointmentCreate, AppointmentGet
 from db.models import Offering, Customer, Appointment, Occupation
 from db.postgresql import get_session
 from db.queries import select_one
-from ws.appointments.notifications import ws_appointments_manager
+from rabbitmq.config import RMQ_URL
 
 
-basic_router = APIRouter()
+basic_router = RabbitRouter(RMQ_URL)
 
 logger = logging.getLogger(__name__)
 
@@ -161,13 +161,16 @@ async def create_new_appointment(
 
     # 7. Отправляем уведомление с кодом подтверждения
     try:
-        result = await ws_appointments_manager.broadcast({
-            'message': 'confirmation',
-            'detail': {
-                'phone': new_appointment.phone,
-                'code': new_appointment.secret_code
-            }
-        })
+        await basic_router.broker.publish(
+            json.dumps({
+                'message': 'confirmation',
+                'detail': {
+                    'phone': new_appointment.phone,
+                    'code': new_appointment.secret_code
+                }
+            }),
+            queue='whatsapp_notifications'
+        )
         logger.debug(f"[DEBUG] WebSocket broadcast result: {result}, phone: {new_appointment.phone}, code: {new_appointment.secret_code}")
     except Exception as e:
         logger.error(f"[ERROR] WebSocket broadcast failed: {e}")

@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.exceptions import register_exception_handlers
 from db.postgresql import create_tables
 from api import routers as api_routers
-from ws import routers as ws_routers
 
 
 app = FastAPI(on_startup=[create_tables])
@@ -23,7 +22,3 @@ register_exception_handlers(app)
 # Регистрация всех api маршрутов
 for router in api_routers:
     app.include_router(router, prefix='/api')
-
-# Регистрация всех ws маршрутов
-for router in ws_routers:
-    app.include_router(router, prefix='/ws')

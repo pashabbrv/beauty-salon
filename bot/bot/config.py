@@ -1,20 +1,16 @@
-import os
 from dotenv import load_dotenv
+from os import getenv
 
 load_dotenv()
 
-INSTANCE_ID = os.getenv("GREENAPI_INSTANCE_ID") or ""
-API_TOKEN = os.getenv("GREENAPI_API_TOKEN") or ""
-OWNER_ID = (os.getenv("OWNER_ID") or "").strip()
+INSTANCE_ID = getenv("GREENAPI_INSTANCE_ID") or ""
+API_TOKEN = getenv("GREENAPI_API_TOKEN") or ""
 
-BACKEND_ENABLED = os.getenv("BACKEND_ENABLED", "0") == "1"
-BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:8000").rstrip("/")
-BACKEND_WS_URL = os.getenv("BACKEND_WS_URL", "ws://localhost:8000").rstrip("/")
+BASE_URL = f"https://api.green-api.com/waInstance{INSTANCE_ID}"
 
-AUTH_BACKEND_TOKEN = os.getenv("BACKEND_TOKEN")
+RMQ_HOST = getenv("RMQ_HOST")
+RMQ_PORT = getenv("RMQ_PORT")
+RMQ_USERNAME = getenv("RMQ_USERNAME")
+RMQ_PASSWORD = getenv("RMQ_PASSWORD")
 
-# rate limit
-RL_WINDOW_SEC = int(os.getenv("RL_WINDOW_SEC", "10"))
-RL_MAX_ACTIONS = int(os.getenv("RL_MAX_ACTIONS", "5"))
-
-DB_PATH = os.getenv("BOT_SQLITE_PATH", "bot_storage.db")
+RMQ_URL = f"amqp://{RMQ_USERNAME}:{RMQ_PASSWORD}@{RMQ_HOST}:{RMQ_PORT}/"

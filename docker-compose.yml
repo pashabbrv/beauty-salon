@@ -14,6 +14,29 @@ services:
     networks:
       - beauty-salon-network
 
+  rabbitmq:
+    image: rabbitmq:3.10.7-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RMQ_PASSWORD:-guest}
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - rabbitmq-log:/var/log/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    networks:
+      - beauty-salon-network
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
@@ -42,6 +65,7 @@ services:
       - ./backend:/app
     depends_on:
       - db
+      - rabbitmq
     networks:
       - beauty-salon-network
 
@@ -70,6 +94,7 @@ services:
       - ./bot:/app
     depends_on:
       - backend
+      - rabbitmq
     networks:
       - beauty-salon-network
 

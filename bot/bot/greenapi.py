@@ -1,44 +1,22 @@
-import os
+import logging
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()
-
-INSTANCE_ID = os.getenv("GREENAPI_INSTANCE_ID")
-API_TOKEN = os.getenv("GREENAPI_API_TOKEN")
-
-BASE_URL = f"https://api.green-api.com/waInstance{INSTANCE_ID}"
+from .config import BASE_URL, API_TOKEN
 
 
-def send_whatsapp_message(chat_id: str, message: str):
-    """
-    chat_id: номер в формате '79991234567@c.us'
-    """
-    url = f"{BASE_URL}/SendMessage/{API_TOKEN}"
-    payload = {
-        "chatId": chat_id,
-        "message": message
-    }
+logger = logging.getLogger(__name__)
+
+
+def send_whatsapp_message(chat_id_or_phone: str, text: str):
+    url = f"{BASE_URL}/sendMessage/{API_TOKEN}"
     try:
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
-        print(f"[DEBUG] Сообщение отправлено → {chat_id}: {message}")
-        return response.json()
+        payload = {"message": text}
+        if chat_id_or_phone.endswith("@c.us"):
+            payload["chatId"] = chat_id_or_phone
+        else:
+            payload["phone"] = chat_id_or_phone
+        r = requests.post(url, json=payload)
+        r.raise_for_status()
+        logger.debug(f"Sent → {chat_id_or_phone}: {text}")
     except requests.RequestException as e:
-        print("[ERROR] Ошибка при отправке сообщения:", e)
-        return None
-
-
-def receive_messages():
-    url = f"{BASE_URL}/ReceiveNotification/{API_TOKEN}"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        print("[DEBUG] Получен ответ от GreenAPI:", data)
-        if data is None:
-            return []
-        return [data]
-    except requests.RequestException as e:
-        print("[ERROR] Ошибка при получении сообщений:", e)
-        return []
+        logger.error(f"sendMessage: {e}")

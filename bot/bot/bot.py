@@ -1,298 +1,41 @@
-# bot.py
+import logging
 import asyncio
-import os
-import time
 import json
-import threading
-import unicodedata
-import requests
-from dotenv import load_dotenv
-from .utils.auth import OWNER_ID, is_owner
-from .utils.notifications import ServerNotifications
-from .commands.export_appointments import get_appointments, format_appointments_compact, create_appointments_excel_file
-from .commands.export_users import get_customers, format_customers_compact, create_customers_excel_file
-from .utils.excel_export import cleanup_temp_file
+from faststream.rabbit import RabbitBroker
+
+from .config import RMQ_URL
+from .greenapi import send_whatsapp_message
 
 
-print(f"[INFO] OWNER_ID={OWNER_ID}")
-
-load_dotenv()
-INSTANCE_ID = os.getenv("GREENAPI_INSTANCE_ID")
-API_TOKEN   = os.getenv("GREENAPI_API_TOKEN")
-
-BASE = f"https://api.green-api.com/waInstance{INSTANCE_ID}"
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-# ====== простейший роутер (если у тебя свой router.py — подключи его здесь) ======
-HELP_TEXT = (
-    "📋 Команды:\n"
-    "/help — список команд\n"
-    # "/add_admin 996xxxxxxxxx\n"
-    # "/remove_admin 996xxxxxxxxx\n"
-    "/export_appointments — экспорт базы записей в Excel\n"
-    "/export_users — экспорт клиентской базы в Excel"
-)
-def handle_message(user_id: str, text: str) -> tuple[str, str] | str:
-    """
-    Обрабатывает сообщение и возвращает ответ.
-    Возвращает:
-    - str: обычный текстовый ответ
-    - tuple[str, str]: ('file', file_path) для отправки файла
-    """
-    print(user_id, text)
-    if not is_owner(user_id):
-        return "" 
-    # отвечаем только на команды
-    if not text.startswith("/"):
-        return ""  # пустая строка = не отвечаем
-    if text.startswith("/help"):
-        return HELP_TEXT
-    if text.startswith("/export_appointments"):
-        result = get_appointments()
-        if not result[0]:
-            return "Произошла ошибка во время получения записей"
-        
-        # Создаем Excel файл
-        file_path = create_appointments_excel_file(result[1])
-        if file_path:
-            return ('file', file_path)
-        else:
-            return "Ошибка создания Excel файла с записями"
-    
-    if text.startswith("/export_users"):
-        result = get_customers()
-        if not result[0]:
-            return "Произошла ошибка во время получения записей"
-        
-        # Создаем Excel файл
-        file_path = create_customers_excel_file(result[1])
-        if file_path:
-            return ('file', file_path)
-        else:
-            return "Ошибка создания Excel файла с клиентами"
-    
-    return "🤖 Команда не распознана. Напиши /help"
+broker = RabbitBroker(RMQ_URL, max_consumers=1)
 
 
-# ====== утилиты Green-API ======
-def _receive_one():
+@broker.subscriber('whatsapp_notifications')
+async def handle_audio(data: str):
     try:
-        url = f"{BASE}/ReceiveNotification/{API_TOKEN}"
-        r = requests.get(url, timeout=25)  # long-poll
-        r.raise_for_status()
-        data = r.json()  # либо None
-        if data:
-            print("[DEBUG] RAW:", json.dumps(data, ensure_ascii=False))
-        return data
-    except Exception as e:
-        print(f"[ERROR] ReceiveNotification: {e}")
-        return None
-
-
-def _delete_notification(receipt_id):
-    if receipt_id is None:
+        body = json.loads(data)
+        # Считываем поля JSON, начинаем обработку
+        message = body['message']
+        detail  = body['detail']
+        
+        if message == 'confirmation':
+            phone = detail['phone']
+            code  = detail['code']
+            send_whatsapp_message(phone, code)
+    except:
         return
-    try:
-        url = f"{BASE}/DeleteNotification/{API_TOKEN}/{receipt_id}"
-        r = requests.delete(url, timeout=10)
-        r.raise_for_status()
-        print(f"[DEBUG] DeleteNotification {receipt_id} OK")
-    except requests.RequestException as e:
-        print(f"[WARN] DeleteNotification {receipt_id} failed: {e}")
 
 
-def _send_file(chat_id_or_phone: str, file_path: str, filename: str = None):
-    """Send a file via GreenAPI"""
-    if not os.path.exists(file_path):
-        print(f"[ERROR] File not found: {file_path}")
-        return False
-        
-    try:
-        url = f"{BASE}/sendFileByUpload/{API_TOKEN}"
-        
-        # Prepare the payload
-        payload = {}
-        if chat_id_or_phone.endswith("@c.us"):
-            payload["chatId"] = chat_id_or_phone
-        else:
-            payload["phone"] = chat_id_or_phone
-            
-        if filename:
-            payload["fileName"] = filename
-        
-        # Send file
-        with open(file_path, 'rb') as f:
-            files = {'file': f}
-            r = requests.post(url, data=payload, files=files, timeout=30)
-        
-        r.raise_for_status()
-        print(f"[DEBUG] File sent → {chat_id_or_phone}: {file_path}")
-        return True
-    except requests.RequestException as e:
-        print(f"[ERROR] sendFile: {e}")
-        return False
+async def main():
+    async with broker:
+        await broker.start()
+        while True:
+            await asyncio.sleep(3600)
 
 
-def _send_text(chat_id_or_phone: str, text: str):
-    if not text:
-        return  # ничего не слать
-    try:
-        url = f"{BASE}/sendMessage/{API_TOKEN}"
-        payload = {"message": text}
-        if chat_id_or_phone.endswith("@c.us"):
-            payload["chatId"] = chat_id_or_phone
-        else:
-            payload["phone"] = chat_id_or_phone
-        r = requests.post(url, json=payload, timeout=15)
-        r.raise_for_status()
-        print(f"[DEBUG] Sent → {chat_id_or_phone}: {text}")
-    except requests.RequestException as e:
-        print(f"[ERROR] sendMessage: {e}")
-
-
-# ====== парсинг ======
-def _extract_text(message_data: dict) -> str | None:
-    """
-    Возвращает нормализованный текст сообщения или None.
-    Поддерживает textMessage и extendedTextMessage.
-    """
-    t = (message_data or {}).get("typeMessage")
-    if t == "textMessage":
-        raw = (message_data.get("textMessageData") or {}).get("textMessage")
-    elif t == "extendedTextMessage":
-        raw = (message_data.get("extendedTextMessageData") or {}).get("text")
-    else:
-        return None
-
-    if raw is None:
-        return None
-
-    # нормализация юникода (слэш может быть похожим символом)
-    s = unicodedata.normalize("NFKC", str(raw)).strip()
-
-    # единая обработка help без слэша
-    lowered = s.lower()
-    if lowered == "help":
-        s = "/help"
-
-    # если команда с лишними пробелами типа "/help   "
-    if s.startswith("/"):
-        s = "/" + s[1:].lstrip()
-
-    return s
-
-
-# ====== дедуп (в памяти) ======
-PROCESSED = set()
-def _msg_key(body: dict) -> str:
-    md = body.get("messageData") or {}
-    # старайся использовать stanzaId; если его нет, idMessage; иначе receiptId
-    return md.get("stanzaId") or md.get("idMessage") or str(body.get("timestamp") or "")  # fallback
-
-
-# ====== основной цикл ======
-def poll_loop():
-    if not INSTANCE_ID or not API_TOKEN:
-        raise RuntimeError("GREENAPI_INSTANCE_ID / GREENAPI_API_TOKEN не заданы в .env")
-    print("[INFO] Бот запущен")
-
-    while True:
-        notif = _receive_one()
-        if notif is None:
-            time.sleep(1.0)
-            continue
-
-        receipt_id = notif.get("receiptId")
-        body = notif.get("body") or {}
-
-        try:
-            twh = body.get("typeWebhook")
-            if twh != "incomingMessageReceived":
-                print(f"[DEBUG] skip typeWebhook={twh}")
-                continue
-
-            key = _msg_key(body)
-            if key and key in PROCESSED:
-                print(f"[DEBUG] dup {key}, skip")
-                continue
-            if key:
-                PROCESSED.add(key)
-
-            sender_data = body.get("senderData") or {}
-            message_data = body.get("messageData") or {}
-            user_id = str(sender_data.get("sender") or "").replace("+", "").strip()
-            chat_id = sender_data.get("chatId")  # '79...@c.us'
-
-            text = _extract_text(message_data)
-            print(f"[IN ] user={user_id} type={message_data.get('typeMessage')} text={text!r}")
-
-            if not user_id or text is None:
-                # не текст — не отвечаем
-                continue
-
-            reply = handle_message(user_id, text)
-            print(f"[OUT] user={user_id} reply={reply!r}")
-            
-            # Проверяем, надо ли отправить файл или текст
-            if isinstance(reply, tuple) and len(reply) == 2 and reply[0] == 'file':
-                # Отправляем файл
-                file_path = reply[1]
-                filename = os.path.basename(file_path)
-                
-                # Отправляем сообщение о начале отправки
-                _send_text(chat_id or user_id, "📋 Подготавливаю Excel файл...")
-                
-                # Отправляем файл
-                success = _send_file(chat_id or user_id, file_path, filename)
-                
-                if success:
-                    _send_text(chat_id or user_id, "✅ Файл успешно отправлен!")
-                else:
-                    _send_text(chat_id or user_id, "❌ Ошибка отправки файла")
-                
-                # Удаляем временный файл
-                cleanup_temp_file(file_path)
-            else:
-                # Обычное текстовое сообщение
-                _send_text(chat_id or user_id, reply)
-
-        except Exception as e:
-            print(f"[ERROR] Обработка: {e}")
-        finally:
-            _delete_notification(receipt_id)
-
-
-# ====== уведомления с сервера ======
-notificator = ServerNotifications(_send_text)
-
-
-if __name__ == "__main__":
-    # Функция для запуска асинхронного слушателя в отдельном потоке
-    def run_websocket_listener():
-        asyncio.run(notificator.notifications_listener())
-    
-    # Запускаем WebSocket слушатель в отдельном потоке
-    websocket_thread = threading.Thread(target=run_websocket_listener, daemon=True)
-    websocket_thread.start()
-    print("[INFO] WebSocket слушатель запущен в отдельном потоке")
-    
-    # Запускаем основной цикл в главном потоке
-    try:
-        poll_loop()
-    except KeyboardInterrupt:
-        print("\n[INFO] Остановка бота...")
-    except Exception as e:
-        print(f"[ERROR] Критическая ошибка: {e}")
-
-# Реализуешь REST эндпоинты на бекенде:
-
-# POST /admins {phone} / DELETE /admins/{phone} / GET /admins/{phone}
-
-# POST /clients/export
-
-# Меняешь .env: BACKEND_ENABLED=1 и (при необходимости) отключаешь локальный utils.export_excel.
-
-# Всё остальное уже готово — бот начнёт ходить в бекенд без переписывания команд.
-
-# Если нужно — добавлю команду /send_otp <phone> и 
-# интеграцию с OTP (из прошлой ветки), а также отправку Excel-файла в чат.
+if __name__ == '__main__':
+    asyncio.run(main())

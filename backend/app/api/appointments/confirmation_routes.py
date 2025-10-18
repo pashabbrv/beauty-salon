@@ -1,5 +1,7 @@
 import logging
-from fastapi import APIRouter, status, Body, Path, Depends, HTTPException
+import json
+from fastapi import status, Body, Path, Depends, HTTPException
+from faststream.rabbit.fastapi import RabbitRouter
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -9,10 +11,10 @@ from core.schemas import OKModel, ConfirmationCode
 from db.models import Appointment
 from db.postgresql import get_session
 from db.queries import select_one
-from ws.appointments.notifications import ws_appointments_manager
+from rabbitmq.config import RMQ_URL
 
 
-confirmation_router = APIRouter()
+confirmation_router = RabbitRouter(RMQ_URL)
 logger = logging.getLogger(__name__)
 
 
@@ -32,38 +34,24 @@ async def refresh_confirmation_code(
             detail='Appointment with such id doesn\'t exist'
         )
     
-    if not ws_appointments_manager.active_connections:
-        logger.warning('No WebSocket connections available')
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail='Cannot send code to notificating devices'
-        )
-    
     try:
-        result = await ws_appointments_manager.broadcast({
-            'message': 'confirmation',
-            'detail': {
-                'phone': appointment.phone,
-                'code': appointment.secret_code
-            }
-        })
-
-        if result:
-            return {'message': 'OK'}
-        else:
-            logger.warning('Broadcast failed for all connections')
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail='Cannot send code to notificating devices'
-            )
-            
+        await confirmation_router.broker.publish(
+            json.dumps({
+                'message': 'confirmation',
+                'detail': {
+                    'phone': appointment.phone,
+                    'code': appointment.secret_code
+                }
+            }),
+            queue='whatsapp_notifications'
+        )
+        return {'message': 'OK'}
     except Exception as e:
-        logger.error(f'Broadcast error: {e}')
+        logger.error(f'RabbitMQ error: {e}')
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail='Cannot send code to notificating devices'
         )
-    
 
 
 @confirmation_router.post(

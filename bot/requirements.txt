@@ -3,4 +3,4 @@ python-dotenv
 pandas
 openpyxl
 router
-websockets
+faststream[rabbit]==0.5.48
