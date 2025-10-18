@@ -25,8 +25,14 @@ async def handle_audio(data: str):
         if message == 'confirmation':
             phone = detail['phone']
             code  = detail['code']
-            send_whatsapp_message(phone, code)
-    except:
+            logger.info(f"Sending confirmation code {code} to {phone}")
+            result = send_whatsapp_message(phone, f"Ваш код подтверждения: {code}")
+            if result:
+                logger.info(f"Successfully sent confirmation code to {phone}")
+            else:
+                logger.error(f"Failed to send confirmation code to {phone}")
+    except Exception as e:
+        logger.error(f"Error processing message: {e}", exc_info=True)
         return
 
 
