@@ -55,14 +55,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: beauty-salon-frontend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    env_file:
-      - .env
     restart: unless-stopped
-    depends_on:
-      - backend
     networks:
       - beauty-salon-network
 

@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /
+WORKDIR /app
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -13,8 +13,12 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app
+USER app
+
 # Copy application code
-COPY app .
+COPY --chown=app:app app .
 
 # Set Python path
 ENV PYTHONPATH=/app
@@ -23,4 +27,4 @@ ENV PYTHONPATH=/app
 EXPOSE 8000
 
 # Command to run the application
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]

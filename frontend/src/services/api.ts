@@ -74,7 +74,7 @@ export interface AuthResponse {
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.88';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://beauty-manager.app/api';
 
     // Remove trailing slash if present
     const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
@@ -218,7 +218,7 @@ class AdminApiService {
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.88';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://beauty-manager.app/api';
 
     // Remove trailing slash if present
     const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
