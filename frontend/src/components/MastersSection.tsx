@@ -12,7 +12,7 @@ const MastersSection = ({ onBookingClick }: MastersSectionProps) => {
       experience: "8 лет",
       rating: 4.9,
       reviewCount: 234,
-      avatar: "/lovable-uploads/2734627b-407b-493f-acaf-78dcb3a69db3.png",
+      avatar: "/placeholder.svg",
       specialties: ["Стрижки", "Окрашивание", "Укладки"]
     },
     {
@@ -21,7 +21,7 @@ const MastersSection = ({ onBookingClick }: MastersSectionProps) => {
       experience: "5 лет",
       rating: 4.8,
       reviewCount: 189,
-      avatar: "/lovable-uploads/e55fa9a4-f93f-46f1-a3ef-3ad70b67864c.png",
+      avatar: "/placeholder.svg",
       specialties: ["Маникюр", "Педикюр", "Nail-арт"]
     },
     {
@@ -30,7 +30,7 @@ const MastersSection = ({ onBookingClick }: MastersSectionProps) => {
       experience: "6 лет",
       rating: 4.9,
       reviewCount: 156,
-      avatar: "/lovable-uploads/3a7e4b26-a301-4446-81f5-e610ffe7bcb8.png",
+      avatar: "/placeholder.svg",
       specialties: ["Макияж", "Брови", "Ресницы"]
     }
   ];

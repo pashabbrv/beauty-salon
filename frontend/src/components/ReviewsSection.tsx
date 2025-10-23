@@ -25,7 +25,7 @@ const ReviewsSection = () => {
       date: "2024-07-15",
       service: "Маникюр + педикюр",
       comment: "Просто восхитительно! Мастер Анна очень профессиональная, аккуратная. Маникюр держится уже 3 недели и выглядит как новый. Салон очень уютный, чисто. Обязательно приду еще!",
-      avatar: "/lovable-uploads/b7d1fc5e-b8e1-4838-a667-bfe6eab50ca8.png",
+      avatar: "/placeholder.svg",
       photos: ["https://images.unsplash.com/photo-1604654894610-df63bc536371?w=300&h=200&fit=crop"],
       helpful: 12
     },

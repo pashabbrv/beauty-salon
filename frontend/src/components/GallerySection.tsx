@@ -19,7 +19,7 @@ const GallerySection = () => {
   const galleryImages = [
     {
       id: 1,
-      src: "/lovable-uploads/cda9c310-68db-41ca-8fc4-48525f6b7a49.png",
+      src: "/placeholder.svg",
       category: "interior",
       title: "Основной зал",
       description: "Современный интерьер салона красоты"
