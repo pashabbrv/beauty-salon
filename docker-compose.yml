@@ -1,19 +1,4 @@
 services:
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: beauty-salon-nginx
-    ports:
-      - "80:80"    # Основной порт для доступа по IP
-      - "443:443"  # Для будущего SSL
-    depends_on:
-      - frontend
-      - backend
-    restart: unless-stopped
-    networks:
-      - beauty-salon-network
-
   rabbitmq:
     image: rabbitmq:3.10.7-management
     container_name: rabbitmq
@@ -52,6 +37,8 @@ services:
       - backend
     networks:
       - beauty-salon-network
+    ports:
+      - "5173:5173"  # Expose frontend directly
 
   backend:
     build:
@@ -68,6 +55,8 @@ services:
       - rabbitmq
     networks:
       - beauty-salon-network
+    ports:
+      - "8000:8000"  # Expose backend directly
 
   db:
     image: postgres:15
