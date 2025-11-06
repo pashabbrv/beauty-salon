@@ -1,6 +1,6 @@
 from datetime import datetime, time
 from pydantic import BaseModel, Field
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 
 phone_str = Annotated[str, Field(min_length=2, max_length=20)]
@@ -121,14 +121,26 @@ class CustomerGet(BaseModel):
     id: id_int
     phone: phone_str
     name: name_str
-    status: Annotated[str, Field(max_length=10)]
+    status: Annotated[str, Field(max_length=20)]
     created_at: datetime
 
 
 class CustomersStatusUpdate(BaseModel):
     """Модель для обновления статуса пользователя
     \n_(по-умолчанию используется верификация **словаря**)_"""
-    status: Annotated[str, Field(max_length=10)]
+    status: Annotated[str, Field(max_length=20)]
+
+
+# New schema for the specific status types
+class CustomerStatusTypes:
+    """Класс для определения типов статусов клиентов"""
+    NEW: ClassVar[str] = "new"
+    REGULAR: ClassVar[str] = "regular"
+    CAPRICIOUS: ClassVar[str] = "capricious"
+    
+    @classmethod
+    def get_all_statuses(cls):
+        return [cls.NEW, cls.REGULAR, cls.CAPRICIOUS]
 
 
 class OKModel(BaseModel):

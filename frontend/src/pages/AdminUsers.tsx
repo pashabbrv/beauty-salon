@@ -6,28 +6,37 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { adminApiService, Customer } from '@/services/api';
-import { Search, PlusCircle, Edit, User } from 'lucide-react';
+import { Search, Edit, User } from 'lucide-react';
 
 export default function AdminUsers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [newStatus, setNewStatus] = useState('active');
+  const [newStatus, setNewStatus] = useState('');
 
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const data = await adminApiService.getCustomers();
-        setCustomers(data);
-        setFilteredCustomers(data);
+        const [customersData, statuses] = await Promise.all([
+          adminApiService.getCustomers(),
+          adminApiService.getCustomerStatuses()
+        ]);
+        setCustomers(customersData);
+        setFilteredCustomers(customersData);
+        setAvailableStatuses(statuses);
+        // Set default status for new customers
+        if (statuses.length > 0) {
+          setNewStatus(statuses[0]);
+        }
       } catch (error) {
-        console.error('Failed to fetch customers:', error);
+        console.error('Failed to fetch customers or statuses:', error);
       } finally {
         setLoading(false);
       }
@@ -64,6 +73,34 @@ export default function AdminUsers() {
     }
   };
 
+  // New handlers for specific status types
+  const handleSetStatusNew = async (phone: string) => {
+    try {
+      const updatedCustomer = await adminApiService.setCustomerStatusNew(phone);
+      setCustomers(customers.map(c => c.phone === phone ? updatedCustomer : c));
+    } catch (error) {
+      console.error('Failed to set customer status to new:', error);
+    }
+  };
+
+  const handleSetStatusRegular = async (phone: string) => {
+    try {
+      const updatedCustomer = await adminApiService.setCustomerStatusRegular(phone);
+      setCustomers(customers.map(c => c.phone === phone ? updatedCustomer : c));
+    } catch (error) {
+      console.error('Failed to set customer status to regular:', error);
+    }
+  };
+
+  const handleSetStatusCapricious = async (phone: string) => {
+    try {
+      const updatedCustomer = await adminApiService.setCustomerStatusCapricious(phone);
+      setCustomers(customers.map(c => c.phone === phone ? updatedCustomer : c));
+    } catch (error) {
+      console.error('Failed to set customer status to capricious:', error);
+    }
+  };
+
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
     setNewStatus(customer.status);
@@ -75,6 +112,32 @@ export default function AdminUsers() {
       await handleStatusChange(editingCustomer.phone, newStatus);
       setIsDialogOpen(false);
       setEditingCustomer(null);
+    }
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'new':
+        return 'default';
+      case 'regular':
+        return 'secondary';
+      case 'capricious':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
+
+  const getStatusDisplayName = (status: string) => {
+    switch (status) {
+      case 'new':
+        return 'Новый';
+      case 'regular':
+        return 'Постоянный';
+      case 'capricious':
+        return 'Капризный';
+      default:
+        return status;
     }
   };
 
@@ -116,8 +179,11 @@ export default function AdminUsers() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Все статусы</SelectItem>
-                  <SelectItem value="active">Активные</SelectItem>
-                  <SelectItem value="blocked">Заблокированные</SelectItem>
+                  {availableStatuses.map(status => (
+                    <SelectItem key={status} value={status}>
+                      {getStatusDisplayName(status)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -140,21 +206,47 @@ export default function AdminUsers() {
                   <TableCell className="font-medium">{customer.name}</TableCell>
                   <TableCell>{customer.phone}</TableCell>
                   <TableCell>
-                    <Badge variant={customer.status === 'active' ? 'default' : 'destructive'}>
-                      {customer.status === 'active' ? 'Активный' : 'Заблокирован'}
+                    <Badge variant={getStatusBadgeVariant(customer.status) as any}>
+                      {getStatusDisplayName(customer.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {new Date(customer.created_at).toLocaleDateString('ru-RU')}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditCustomer(customer)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditCustomer(customer)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSetStatusNew(customer.phone)}
+                        disabled={customer.status === 'new'}
+                      >
+                        Новый
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSetStatusRegular(customer.phone)}
+                        disabled={customer.status === 'regular'}
+                      >
+                        Постоянный
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSetStatusCapricious(customer.phone)}
+                        disabled={customer.status === 'capricious'}
+                      >
+                        Капризный
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -216,8 +308,11 @@ export default function AdminUsers() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Активный</SelectItem>
-                    <SelectItem value="blocked">Заблокирован</SelectItem>
+                    {availableStatuses.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {getStatusDisplayName(status)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

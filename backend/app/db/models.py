@@ -21,7 +21,7 @@ class Customer(Base):
     id: Mapped[int_pk]
     phone: Mapped[str] = mapped_column(String(20))
     name: Mapped[str] = mapped_column(String(100))
-    status: Mapped[str] = mapped_column(String(10))
+    status: Mapped[str] = mapped_column(String(20))  # Increased size to accommodate new statuses
     created_at: Mapped[creation_time]
 
 
