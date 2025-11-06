@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
 import ServicesSection from "@/components/ServicesSection";
+import MastersServicesSection from "@/components/MastersServicesSection";
 import BookingModal from "@/components/BookingModal";
 import { apiService, Service } from "@/services/api";
 
@@ -34,6 +35,7 @@ const Index = () => {
   
   // Refs for smooth scrolling to sections
   const servicesRef = useRef<HTMLDivElement>(null);
+  const mastersRef = useRef<HTMLDivElement>(null);
   const contactsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -85,6 +87,7 @@ const Index = () => {
         onBookingClick={openBookingModal}
         refs={{
           services: servicesRef,
+          masters: mastersRef,
           contacts: contactsRef
         }}
       />
@@ -93,6 +96,11 @@ const Index = () => {
         <HeroSection onBookingClick={openBookingModal} />
         <div ref={servicesRef}>
           <ServicesSection onBookingClick={openBookingModal} availableServices={availableServices} />
+        </div>
+        
+        {/* Masters Services Section */}
+        <div ref={mastersRef}>
+          <MastersServicesSection />
         </div>
         
         {/* Booking Modal */}

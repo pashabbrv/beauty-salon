@@ -48,6 +48,15 @@ export interface Customer {
   created_at: string;
 }
 
+export interface Product {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  unit: string; // 'milliliters' or 'pieces'
+  created_at: string;
+}
+
 // Extend the existing interfaces for admin functionality
 export interface AdminStats {
   totalAppointments: number;
@@ -331,10 +340,34 @@ class AdminApiService {
     return this.request<Customer[]>('/customers/');
   }
 
+  async getCustomerStatuses(): Promise<string[]> {
+    const response = await this.request<{ statuses: string[] }>('/customers/statuses/');
+    return response.statuses;
+  }
+
   async updateCustomerStatus(phone: string, status: string): Promise<Customer> {
     return this.request<Customer>(`/customers/${phone}/status/`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
+    });
+  }
+
+  // New methods for specific status types
+  async setCustomerStatusNew(phone: string): Promise<Customer> {
+    return this.request<Customer>(`/customers/${phone}/status/new/`, {
+      method: 'POST'
+    });
+  }
+
+  async setCustomerStatusRegular(phone: string): Promise<Customer> {
+    return this.request<Customer>(`/customers/${phone}/status/regular/`, {
+      method: 'POST'
+    });
+  }
+
+  async setCustomerStatusCapricious(phone: string): Promise<Customer> {
+    return this.request<Customer>(`/customers/${phone}/status/capricious/`, {
+      method: 'POST'
     });
   }
 
@@ -449,6 +482,31 @@ class AdminApiService {
     // This would be an admin confirmation endpoint
     return this.request<{ message: string }>(`/appointments/${appointmentId}/admin_confirm/`, {
       method: 'POST'
+    });
+  }
+
+  // Product management
+  async getProducts(): Promise<Product[]> {
+    return this.request<Product[]>('/products/');
+  }
+
+  async createProduct(product: { name: string; price: number; quantity: number; unit: string }): Promise<Product> {
+    return this.request<Product>('/products/', {
+      method: 'POST',
+      body: JSON.stringify(product)
+    });
+  }
+
+  async updateProduct(productId: number, product: { name?: string; price?: number; quantity?: number; unit?: string }): Promise<Product> {
+    return this.request<Product>(`/products/${productId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(product)
+    });
+  }
+
+  async deleteProduct(productId: number): Promise<void> {
+    return this.request<void>(`/products/${productId}/`, {
+      method: 'DELETE'
     });
   }
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ImageIcon } from "lucide-react";
 
 interface ServicesSectionProps {
   onBookingClick?: () => void;
@@ -85,33 +86,39 @@ const ServicesSection = ({ onBookingClick, availableServices }: ServicesSectionP
         </div>
 
         {/* Simple services list */}
-        <div className="max-w-2xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="w-[90%] mx-auto">
+          <div className="flex flex-wrap justify-center gap-6">
             {filteredServices.map((service, index) => (
-              <Card 
-                key={service.id} 
-                className="hover:shadow-elegant transition-all duration-300 cursor-pointer border-primary/10"
-                onClick={() => handleBook(service.id)}
-              >
-                <CardHeader className="pb-3 p-4">
-                  <CardTitle className="text-base sm:text-lg text-center group-hover:text-primary transition-colors">
-                    {service.name}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
+              <div key={service.id} className="w-[30%] min-w-[220px]">
+                <Card 
+                  className="hover:shadow-elegant transition-all duration-300 cursor-pointer border-primary/10 h-full"
+                  onClick={() => handleBook(service.id)}
+                >
+                  <CardHeader className="pb-3 p-4">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="bg-gray-200 border-2 border-dashed rounded-xl w-24 h-24 flex items-center justify-center mx-auto">
+                        <ImageIcon className="w-12 h-12 text-gray-500" />
+                      </div>
+                      <CardTitle className="text-base sm:text-lg text-center group-hover:text-primary transition-colors">
+                        {service.name}
+                      </CardTitle>
+                      <Button 
+                        className="w-full bg-gradient-primary shadow-soft hover:shadow-elegant transition-all duration-300"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBook(service.id);
+                        }}
+                      >
+                        Записаться
+                      </Button>
+                    </div>
+                  </CardHeader>
+                </Card>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Booking button */}
-        <div className="text-center mt-8">
-          <Button 
-            onClick={onBookingClick}
-            className="h-10 sm:h-12 text-base sm:text-lg bg-gradient-primary shadow-soft hover:shadow-elegant transition-all duration-300 px-8"
-          >
-            Записаться на услугу
-          </Button>
-        </div>
       </div>
     </section>
   );

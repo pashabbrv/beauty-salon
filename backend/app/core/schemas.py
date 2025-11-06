@@ -1,6 +1,6 @@
 from datetime import datetime, time
 from pydantic import BaseModel, Field
-from typing import Annotated, ClassVar
+from typing import Annotated, Optional, ClassVar, Optional
 
 
 phone_str = Annotated[str, Field(min_length=2, max_length=20)]
@@ -146,3 +146,33 @@ class CustomerStatusTypes:
 class OKModel(BaseModel):
     """Модель ответа для {"message": "OK"}"""
     message: Annotated[str, Field(default='OK')]
+
+
+# Product schemas
+class ProductCreate(BaseModel):
+    """Модель для создания нового товара"""
+    name: name_str
+    price: price_type
+    quantity: Annotated[int, Field(ge=0)]
+    unit: Annotated[str, Field(max_length=20)]  # 'milliliters' or 'pieces'
+
+
+class ProductUpdate(BaseModel):
+    """Модель для обновления информации о товаре"""
+    name: Optional[name_str] = None
+    price: Optional[price_type] = None
+    quantity: Optional[Annotated[int, Field(ge=0)]] = None
+    unit: Optional[Annotated[str, Field(max_length=20)]] = None
+
+
+class ProductDB(BaseModel):
+    """Модель для получения информации о товаре из базы данных"""
+    id: id_int
+    name: name_str
+    price: price_type
+    quantity: int
+    unit: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
