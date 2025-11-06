@@ -48,15 +48,6 @@ export interface Customer {
   created_at: string;
 }
 
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  quantity: number;
-  unit: string; // 'milliliters' or 'pieces'
-  created_at: string;
-}
-
 // Extend the existing interfaces for admin functionality
 export interface AdminStats {
   totalAppointments: number;
@@ -482,31 +473,6 @@ class AdminApiService {
     // This would be an admin confirmation endpoint
     return this.request<{ message: string }>(`/appointments/${appointmentId}/admin_confirm/`, {
       method: 'POST'
-    });
-  }
-
-  // Product management
-  async getProducts(): Promise<Product[]> {
-    return this.request<Product[]>('/products/');
-  }
-
-  async createProduct(product: { name: string; price: number; quantity: number; unit: string }): Promise<Product> {
-    return this.request<Product>('/products/', {
-      method: 'POST',
-      body: JSON.stringify(product)
-    });
-  }
-
-  async updateProduct(productId: number, product: { name?: string; price?: number; quantity?: number; unit?: string }): Promise<Product> {
-    return this.request<Product>(`/products/${productId}/`, {
-      method: 'PUT',
-      body: JSON.stringify(product)
-    });
-  }
-
-  async deleteProduct(productId: number): Promise<void> {
-    return this.request<void>(`/products/${productId}/`, {
-      method: 'DELETE'
     });
   }
 }

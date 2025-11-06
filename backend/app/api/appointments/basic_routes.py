@@ -75,7 +75,7 @@ async def create_new_appointment(
             .values(
                 phone=appointment.phone,
                 name=appointment.name,
-                status='active'
+                status='new'
             ).returning(Customer)
         )
         customer = result.scalar_one()
