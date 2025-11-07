@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { adminApiService, Customer } from '@/services/api';
 import { Search, Edit, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function AdminUsers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -120,7 +121,7 @@ export default function AdminUsers() {
       case 'new':
         return 'default';
       case 'regular':
-        return 'secondary';
+        return 'default';
       case 'capricious':
         return 'destructive';
       default:
@@ -139,6 +140,13 @@ export default function AdminUsers() {
       default:
         return status;
     }
+  };
+
+  const getBadgeClassName = (status: string) => {
+    if (status === 'regular') {
+      return 'border-transparent bg-green-500 text-white hover:bg-green-600';
+    }
+    return '';
   };
 
   if (loading) {
@@ -206,7 +214,10 @@ export default function AdminUsers() {
                   <TableCell className="font-medium">{customer.name}</TableCell>
                   <TableCell>{customer.phone}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(customer.status) as any}>
+                    <Badge 
+                      variant={getStatusBadgeVariant(customer.status) as any}
+                      className={getBadgeClassName(customer.status)}
+                    >
                       {getStatusDisplayName(customer.status)}
                     </Badge>
                   </TableCell>

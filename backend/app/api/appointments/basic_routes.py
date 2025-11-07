@@ -178,6 +178,115 @@ async def create_new_appointment(
     return new_appointment
 
 
+@basic_router.post(
+    '/admin_create/',
+    response_model=AppointmentGet,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(verify_token)]
+)
+async def admin_create_appointment(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    appointment: Annotated[AppointmentCreate, Body()]
+):
+    """Административная запись клиента (без подтверждения)"""
+    # 1. Поиск пользователя по номеру телефона (с созданием нового по надобности)
+    customer = await select_one(session, Customer, {'phone': appointment.phone})
+    if customer is None:
+        result = await session.execute(
+            insert(Customer)
+            .values(
+                phone=appointment.phone,
+                name=appointment.name,
+                status='new'
+            ).returning(Customer)
+        )
+        customer = result.scalar_one()
+    else:
+        # Проверка, что пользователь не заблокирован
+        if customer.status == 'blocked':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='User with this phone number has been blocked'
+            )
+    
+    # 2. Поиск услуги мастера по id
+    offering = await select_one(session, Offering, {'id': appointment.offering_id})
+    if offering is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Offering with such id doesn\'t exist'
+        )
+    
+    # 3. Проверка на свободность выбираемого времени
+    slots_result = await session.execute(
+        select(Occupation).where(Occupation.master_id == offering.master_id)
+    )
+    occupations = slots_result.scalars().all()
+    busy_intervals = [(el.start, el.end) for el in occupations]
+
+    # Проверка на стандартные ограничения
+    if appointment.datetime not in generate_time_slots_for_now(
+        offering.duration.hour,
+        offering.duration.minute
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='This time is incorrect'
+        )
+    # Проверка на попадание в занятые слоты
+    offering_duration = timedelta(
+        hours=offering.duration.hour,
+        minutes=offering.duration.minute
+    )
+    if is_slot_busy(appointment.datetime, busy_intervals, offering_duration):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='This time is not available now'
+        )
+
+    # 4. Забиваем временной слот у мастера
+    occupation_result = await session.execute(
+        insert(Occupation)
+        .values(
+            master_id=offering.master_id,
+            start=appointment.datetime,
+            end=appointment.datetime + timedelta(
+                hours=offering.duration.hour,
+                minutes=offering.duration.minute,
+                seconds=offering.duration.second
+            )
+        ).returning(Occupation.id)
+    )
+
+    # 5. Создаём запись в бд (уже подтверждена, так как создана администратором)
+    result = await session.execute(
+        insert(Appointment)
+        .values(
+            name=appointment.name,
+            customer_id=customer.id,
+            offering_id=offering.id,
+            occupation_id=occupation_result.scalar_one(),
+            secret_code=''.join(str(secrets.randbelow(10)) for _ in range(5)),
+            confirmed=True  # Автоматически подтверждена администратором
+        ).returning(Appointment)
+        .options(
+            joinedload(Appointment.customer),
+            joinedload(Appointment.offering).joinedload(Offering.master),
+            joinedload(Appointment.offering).joinedload(Offering.service),
+            joinedload(Appointment.slot)
+        )
+    )
+    new_appointment = result.scalar_one()
+    
+    # 6. Сохраняем изменения
+    await session.commit()
+    await session.refresh(new_appointment)
+    
+    # Примечание: уведомление не отправляется, так как запись уже подтверждена
+    
+    return new_appointment
+
+
 @basic_router.delete(
     '/{appointment_id}/',
     status_code=status.HTTP_204_NO_CONTENT,

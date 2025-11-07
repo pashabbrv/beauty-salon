@@ -426,8 +426,17 @@ class AdminApiService {
   }
 
   // Offering management
-  async getOfferings(): Promise<Offering[]> {
-    return this.request<Offering[]>('/offerings/');
+  async getOfferings(serviceId?: number, masterId?: number): Promise<Offering[]> {
+    const params = new URLSearchParams();
+    if (serviceId) params.append('service_id', serviceId.toString());
+    if (masterId) params.append('master_id', masterId.toString());
+
+    const queryString = params.toString();
+    return this.request<Offering[]>(`/offerings/${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getTimeSlots(offeringId: number): Promise<string[]> {
+    return this.request<string[]>(`/offerings/${offeringId}/slots/`);
   }
 
   async createOffering(offering: {
@@ -438,7 +447,10 @@ class AdminApiService {
   }): Promise<Offering> {
     return this.request<Offering>('/offerings/', {
       method: 'POST',
-      body: JSON.stringify(offering)
+      body: JSON.stringify(offering),
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
     });
   }
 
@@ -451,20 +463,30 @@ class AdminApiService {
   }): Promise<Offering> {
     return this.request<Offering>(`/offerings/${offeringId}/`, {
       method: 'PUT',
-      body: JSON.stringify(offering)
+      body: JSON.stringify(offering),
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
     });
   }
 
   // Add delete offering method
   async deleteOffering(offeringId: number): Promise<void> {
     return this.request<void>(`/offerings/${offeringId}/`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
     });
   }
 
   // Product management
   async getProducts(): Promise<Product[]> {
-    return this.request<Product[]>('/products/');
+    return this.request<Product[]>('/products/', {
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
   }
 
   async createProduct(product: {
@@ -475,7 +497,10 @@ class AdminApiService {
   }): Promise<Product> {
     return this.request<Product>('/products/', {
       method: 'POST',
-      body: JSON.stringify(product)
+      body: JSON.stringify(product),
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
     });
   }
 
@@ -487,13 +512,19 @@ class AdminApiService {
   }): Promise<Product> {
     return this.request<Product>(`/products/${productId}/`, {
       method: 'PUT',
-      body: JSON.stringify(product)
+      body: JSON.stringify(product),
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
     });
   }
 
   async deleteProduct(productId: number): Promise<void> {
     return this.request<void>(`/products/${productId}/`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
     });
   }
 
@@ -504,19 +535,39 @@ class AdminApiService {
     if (confirmed !== undefined) params.append('confirmed', confirmed.toString());
 
     const query = params.toString();
-    return this.request<Appointment[]>(`/appointments/${query ? `?${query}` : ''}`);
+    return this.request<Appointment[]>(`/appointments/${query ? `?${query}` : ''}`, {
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
+  }
+
+  async adminCreateAppointment(appointmentData: AppointmentRequest): Promise<Appointment> {
+    return this.request<Appointment>('/appointments/admin_create/', {
+      method: 'POST',
+      body: JSON.stringify(appointmentData),
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
   }
 
   async deleteAppointment(appointmentId: number): Promise<void> {
     return this.request<void>(`/appointments/${appointmentId}/`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
     });
   }
 
   async confirmAppointment(appointmentId: number): Promise<{ message: string }> {
     // This would be an admin confirmation endpoint
     return this.request<{ message: string }>(`/appointments/${appointmentId}/admin_confirm/`, {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
     });
   }
 }

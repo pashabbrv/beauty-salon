@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { adminApiService, Appointment } from '@/services/api';
-import { Search, CheckCircle, XCircle, Calendar } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Calendar, Plus } from 'lucide-react';
+import AdminBookingModal from '@/components/AdminBookingModal';
 
 export default function AdminAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -13,6 +14,7 @@ export default function AdminAppointments() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -75,6 +77,17 @@ export default function AdminAppointments() {
     }
   };
 
+  const handleBookingCreated = async () => {
+    // Refresh the appointments list
+    try {
+      const updatedAppointments = await adminApiService.getAppointments();
+      setAppointments(updatedAppointments);
+      setFilteredAppointments(updatedAppointments);
+    } catch (error) {
+      console.error('Failed to refresh appointments:', error);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-full">Загрузка...</div>;
   }
@@ -98,6 +111,10 @@ export default function AdminAppointments() {
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={() => setIsBookingModalOpen(true)} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Создать запись
+              </Button>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -189,6 +206,12 @@ export default function AdminAppointments() {
           )}
         </CardContent>
       </Card>
+      
+      <AdminBookingModal 
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        onBookingCreated={handleBookingCreated}
+      />
     </div>
   );
 }
