@@ -13,6 +13,7 @@ import AdminUsers from "./pages/AdminUsers";
 import AdminContent from "./pages/AdminContent";
 import AdminAppointments from "./pages/AdminAppointments";
 import AdminSettings from "./pages/AdminSettings";
+import AdminProducts from "./pages/AdminProducts";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,11 @@ const App = () => (
             <Route path="content" element={
               <ProtectedRoute>
                 <AdminContent />
+              </ProtectedRoute>
+            } />
+            <Route path="products" element={
+              <ProtectedRoute>
+                <AdminProducts />
               </ProtectedRoute>
             } />
             <Route path="appointments" element={

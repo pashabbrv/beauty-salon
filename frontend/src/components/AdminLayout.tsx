@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Package2, Users, Calendar, Settings, LogOut, BarChart3 } from 'lucide-react';
+import { Menu, Package2, Users, Calendar, Settings, LogOut, BarChart3, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
@@ -20,6 +20,11 @@ const navigation = [
     name: 'Контент',
     href: '/admin/content',
     icon: Package2,
+  },
+  {
+    name: 'Товары',
+    href: '/admin/products',
+    icon: ShoppingCart,
   },
   {
     name: 'Записи',

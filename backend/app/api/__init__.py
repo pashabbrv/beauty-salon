@@ -3,6 +3,7 @@ from .customers import customers_router
 from .masters import masters_router
 from .offerings import offerings_router
 from .services import services_router
+from .products import products_router
 
 
 routers = [
@@ -10,5 +11,6 @@ routers = [
     customers_router,
     services_router,
     masters_router,
-    offerings_router
+    offerings_router,
+    products_router
 ]

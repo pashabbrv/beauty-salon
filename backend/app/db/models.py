@@ -1,5 +1,5 @@
 from datetime import datetime, time
-from sqlalchemy import String, ForeignKey, text
+from sqlalchemy import String, ForeignKey, text, DateTime
 from sqlalchemy.orm import (
     DeclarativeBase, Mapped, mapped_column, relationship
 )
@@ -54,6 +54,18 @@ class Service(Base):
         cascade='all, delete-orphan',
         passive_deletes=True
     )
+
+
+class Product(Base):
+    __tablename__ = 'products'
+
+    # Основные поля в таблице
+    id: Mapped[int_pk]
+    name: Mapped[str] = mapped_column(String(100))
+    price: Mapped[int]  # Цена в сомах (целое число)
+    quantity: Mapped[int]  # Количество в единицах (миллилитры или штуки)
+    unit: Mapped[str] = mapped_column(String(20))  # Единица измерения ('milliliters' или 'pieces')
+    created_at: Mapped[creation_time]
 
 
 class Offering(Base):
