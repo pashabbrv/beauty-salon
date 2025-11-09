@@ -44,6 +44,21 @@ export default function AdminUsers() {
     };
 
     fetchCustomers();
+
+    // Listen for appointment creation events
+    const handleAppointmentCreated = () => {
+      // Add a small delay to ensure the backend has processed the new customer
+      setTimeout(() => {
+        fetchCustomers();
+      }, 1000);
+    };
+
+    window.addEventListener('appointmentCreated', handleAppointmentCreated);
+
+    // Cleanup event listener
+    return () => {
+      window.removeEventListener('appointmentCreated', handleAppointmentCreated);
+    };
   }, []);
 
   useEffect(() => {

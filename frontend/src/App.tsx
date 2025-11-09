@@ -14,6 +14,7 @@ import AdminContent from "./pages/AdminContent";
 import AdminAppointments from "./pages/AdminAppointments";
 import AdminSettings from "./pages/AdminSettings";
 import AdminProducts from "./pages/AdminProducts";
+import AdminCashRegister from "./pages/AdminCashRegister";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,11 @@ const App = () => (
             <Route path="settings" element={
               <ProtectedRoute>
                 <AdminSettings />
+              </ProtectedRoute>
+            } />
+            <Route path="cash-register" element={
+              <ProtectedRoute>
+                <AdminCashRegister />
               </ProtectedRoute>
             } />
           </Route>

@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime, time, date
 from pydantic import BaseModel, Field
 from typing import Annotated, Optional, ClassVar, Optional
 
@@ -176,3 +176,50 @@ class ProductDB(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Cash Register schemas
+class TransactionCreate(BaseModel):
+    """Модель для создания новой транзакции"""
+    offering_id: Optional[id_int] = None
+    product_id: Optional[id_int] = None
+    product_quantity_used: Optional[Annotated[int, Field(ge=0)]] = None
+    overtime_amount: Optional[price_type] = None
+    total_amount: price_type
+    transaction_type: Annotated[str, Field(max_length=20)]  # 'income' or 'expense'
+    transaction_date: date
+
+
+class TransactionUpdate(BaseModel):
+    """Модель для обновления транзакции"""
+    offering_id: Optional[id_int] = None
+    product_id: Optional[id_int] = None
+    product_quantity_used: Optional[Annotated[int, Field(ge=0)]] = None
+    overtime_amount: Optional[price_type] = None
+    total_amount: Optional[price_type] = None
+    transaction_type: Optional[Annotated[str, Field(max_length=20)]] = None
+    transaction_date: Optional[date] = None
+
+
+class TransactionDB(BaseModel):
+    """Модель для получения информации о транзакции из базы данных"""
+    id: id_int
+    offering_id: Optional[id_int] = None
+    product_id: Optional[id_int] = None
+    product_quantity_used: Optional[int] = None
+    overtime_amount: Optional[price_type] = None
+    total_amount: price_type
+    transaction_type: str
+    transaction_date: date
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CashSummary(BaseModel):
+    """Модель для получения сводной информации о кассе"""
+    date: date
+    income: price_type
+    expenses: price_type
+    balance: price_type

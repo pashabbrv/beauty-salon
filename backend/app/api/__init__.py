@@ -4,6 +4,7 @@ from .masters import masters_router
 from .offerings import offerings_router
 from .services import services_router
 from .products import products_router
+from .cash_register import cash_register_router
 
 
 routers = [
@@ -12,5 +13,6 @@ routers = [
     services_router,
     masters_router,
     offerings_router,
-    products_router
+    products_router,
+    cash_register_router
 ]

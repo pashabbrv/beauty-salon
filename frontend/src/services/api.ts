@@ -29,6 +29,25 @@ export interface Product {
   created_at: string;
 }
 
+export interface Transaction {
+  id: number;
+  offering_id: number | null;
+  product_id: number | null;
+  product_quantity_used: number | null;
+  overtime_amount: number | null;
+  total_amount: number;
+  transaction_type: string; // 'income' or 'expense'
+  transaction_date: string; // YYYY-MM-DD
+  created_at: string;
+}
+
+export interface CashSummary {
+  date: string; // YYYY-MM-DD
+  income: number;
+  expenses: number;
+  balance: number;
+}
+
 export interface AppointmentRequest {
   name: string;
   phone: string;
@@ -65,6 +84,25 @@ export interface AdminStats {
   totalCustomers: number;
   totalServices: number;
   totalMasters: number;
+  // Financial statistics
+  totalIncome: number;
+  totalExpenses: number;
+  currentBalance: number;
+  // Product statistics
+  totalProducts: number;
+  lowStockProducts: number;
+  // Customer status statistics
+  newCustomers: number;
+  regularCustomers: number;
+  capriciousCustomers: number;
+  blockedCustomers: number;
+  // Appointment statistics
+  todayAppointments: number;
+  upcomingAppointments: number;
+  // Service statistics
+  popularServices: { service: string; count: number }[];
+  // Master statistics
+  masterWorkload: { master: string; appointments: number }[];
 }
 
 export interface LoginCredentials {
@@ -322,8 +360,70 @@ class AdminApiService {
     const customers = await this.getCustomers();
     const services = await this.getServices();
     const masters = await this.getMasters();
+    const products = await this.getProducts();
+    // For financial data, we'll get the current month's summary
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const cashSummary = await this.getCashSummaryRange(
+      firstDay.toISOString().split('T')[0],
+      lastDay.toISOString().split('T')[0]
+    );
     
     const confirmedAppointments = appointments.filter(a => a.confirmed).length;
+    
+    // Calculate financial statistics
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    cashSummary.forEach(summary => {
+      totalIncome += summary.income;
+      totalExpenses += summary.expenses;
+    });
+    const currentBalance = totalIncome - totalExpenses;
+    
+    // Customer status statistics
+    const newCustomers = customers.filter(c => c.status === 'new').length;
+    const regularCustomers = customers.filter(c => c.status === 'regular').length;
+    const capriciousCustomers = customers.filter(c => c.status === 'capricious').length;
+    const blockedCustomers = customers.filter(c => c.status === 'blocked').length;
+    
+    // Appointment statistics
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayAppointments = appointments.filter(a => 
+      a.slot.start.startsWith(todayStr)
+    ).length;
+    
+    const now = new Date();
+    const upcomingAppointments = appointments.filter(a => {
+      const appointmentDate = new Date(a.slot.start);
+      return appointmentDate > now && !a.confirmed;
+    }).length;
+    
+    // Service popularity (simplified)
+    const serviceCount: Record<string, number> = {};
+    appointments.forEach(a => {
+      const serviceName = a.offering.service.name;
+      serviceCount[serviceName] = (serviceCount[serviceName] || 0) + 1;
+    });
+    
+    const popularServices = Object.entries(serviceCount)
+      .map(([service, count]) => ({ service, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    
+    // Master workload
+    const masterCount: Record<string, number> = {};
+    appointments.forEach(a => {
+      const masterName = a.offering.master.name;
+      masterCount[masterName] = (masterCount[masterName] || 0) + 1;
+    });
+    
+    const masterWorkload = Object.entries(masterCount)
+      .map(([master, appointments]) => ({ master, appointments }))
+      .sort((a, b) => b.appointments - a.appointments);
+    
+    // Product statistics
+    const lowStockProducts = products.filter(p => p.quantity < 10).length;
     
     return {
       totalAppointments: appointments.length,
@@ -331,7 +431,20 @@ class AdminApiService {
       pendingAppointments: appointments.length - confirmedAppointments,
       totalCustomers: customers.length,
       totalServices: services.length,
-      totalMasters: masters.length
+      totalMasters: masters.length,
+      totalIncome,
+      totalExpenses,
+      currentBalance,
+      totalProducts: products.length,
+      lowStockProducts,
+      newCustomers,
+      regularCustomers,
+      capriciousCustomers,
+      blockedCustomers,
+      todayAppointments,
+      upcomingAppointments,
+      popularServices,
+      masterWorkload
     };
   }
 
@@ -521,6 +634,99 @@ class AdminApiService {
 
   async deleteProduct(productId: number): Promise<void> {
     return this.request<void>(`/products/${productId}/`, {
+      method: 'DELETE',
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
+  }
+
+  // Cash Register management
+  async getTransactions(startDate?: string, endDate?: string, transactionType?: string): Promise<Transaction[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (transactionType) params.append('transaction_type', transactionType);
+
+    const queryString = params.toString();
+    return this.request<Transaction[]>(`/cash-register/transactions/${queryString ? `?${queryString}` : ''}`, {
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
+  }
+
+  async createTransaction(transaction: {
+    offering_id?: number | null;
+    product_id?: number | null;
+    product_quantity_used?: number | null;
+    overtime_amount?: number | null;
+    total_amount: number;
+    transaction_type: string;
+    transaction_date: string;
+  }): Promise<Transaction> {
+    return this.request<Transaction>('/cash-register/transactions/', {
+      method: 'POST',
+      body: JSON.stringify(transaction),
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
+  }
+
+  async getCashSummary(summaryDate?: string): Promise<CashSummary> {
+    const params = new URLSearchParams();
+    if (summaryDate) params.append('summary_date', summaryDate);
+
+    const queryString = params.toString();
+    return this.request<CashSummary>(`/cash-register/summary/${queryString ? `?${queryString}` : ''}`, {
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
+  }
+
+  async getCashSummaryRange(startDate: string, endDate: string): Promise<CashSummary[]> {
+    const params = new URLSearchParams();
+    params.append('start_date', startDate);
+    params.append('end_date', endDate);
+
+    const queryString = params.toString();
+    return this.request<CashSummary[]>(`/cash-register/summary-range/${queryString ? `?${queryString}` : ''}`, {
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
+  }
+
+  async withdrawMoney(amount: number, transactionDate?: string): Promise<Transaction> {
+    return this.request<Transaction>('/cash-register/withdraw/', {
+      method: 'POST',
+      body: JSON.stringify({
+        amount,
+        transaction_date: transactionDate
+      }),
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
+  }
+
+  async depositMoney(amount: number, transactionDate?: string): Promise<Transaction> {
+    return this.request<Transaction>('/cash-register/deposit/', {
+      method: 'POST',
+      body: JSON.stringify({
+        amount,
+        transaction_date: transactionDate
+      }),
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
+  }
+
+  async deleteTransaction(transactionId: number): Promise<void> {
+    return this.request<void>(`/cash-register/transactions/${transactionId}/`, {
       method: 'DELETE',
       headers: {
         'Auth-Token': this.authToken || '',

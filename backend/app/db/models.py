@@ -1,5 +1,5 @@
-from datetime import datetime, time
-from sqlalchemy import String, ForeignKey, text, DateTime
+from datetime import datetime, time, date
+from sqlalchemy import String, ForeignKey, text, DateTime, Date, Numeric
 from sqlalchemy.orm import (
     DeclarativeBase, Mapped, mapped_column, relationship
 )
@@ -126,3 +126,32 @@ class Appointment(Base):
     @hybrid_property
     def phone(self) -> str:
         return self.customer.phone
+
+
+class Transaction(Base):
+    __tablename__ = 'transactions'
+
+    id: Mapped[int_pk]
+    # Service details (optional)
+    offering_id: Mapped[int | None] = mapped_column(
+        ForeignKey('offerings.id', ondelete='SET NULL'), nullable=True
+    )
+    # Product details (optional)
+    product_id: Mapped[int | None] = mapped_column(
+        ForeignKey('products.id', ondelete='SET NULL'), nullable=True
+    )
+    product_quantity_used: Mapped[int | None]  # Quantity of product used in ml or pieces
+    # Overtime amount (optional)
+    overtime_amount: Mapped[int | None]  # Amount in som
+    # Total transaction amount (calculated)
+    total_amount: Mapped[int]  # Amount in som
+    # Transaction type (income or expense)
+    transaction_type: Mapped[str] = mapped_column(String(20))  # 'income' or 'expense'
+    # Date of transaction
+    transaction_date: Mapped[date]
+    # Creation timestamp
+    created_at: Mapped[creation_time]
+
+    # Relationships
+    offering: Mapped['Offering'] = relationship()
+    product: Mapped['Product'] = relationship()

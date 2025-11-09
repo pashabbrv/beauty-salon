@@ -185,6 +185,11 @@ const AdminBookingModal = ({ isOpen, onClose, onBookingCreated }: AdminBookingMo
         description: "Запись клиента успешно создана и подтверждена.",
       });
 
+      // Dispatch a custom event to notify other components
+      window.dispatchEvent(new CustomEvent('appointmentCreated', {
+        detail: { name, phone }
+      }));
+
       // Reset form and close modal
       resetForm();
       onBookingCreated();

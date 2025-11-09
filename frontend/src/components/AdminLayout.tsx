@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Package2, Users, Calendar, Settings, LogOut, BarChart3, ShoppingCart } from 'lucide-react';
+import { Menu, Package2, Users, Calendar, Settings, LogOut, BarChart3, ShoppingCart, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
@@ -35,6 +35,11 @@ const navigation = [
     name: 'Настройки',
     href: '/admin/settings',
     icon: Settings,
+  },
+  {
+    name: 'Касса',
+    href: '/admin/cash-register',
+    icon: Wallet,
   },
 ];
 
