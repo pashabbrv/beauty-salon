@@ -150,11 +150,12 @@ class OKModel(BaseModel):
 
 # Product schemas
 class ProductCreate(BaseModel):
-    """Модель для создания нового товара"""
+    """Модель для создания нового товара
+    Хранит общий объем/количество товара (например, 1000 мл шампуня или 100 упаковок краски)"""
     name: name_str
-    price: price_type
-    quantity: Annotated[int, Field(ge=0)]
-    unit: Annotated[str, Field(max_length=20)]  # 'milliliters' or 'pieces'
+    price: price_type  # Цена за единицу (за 1 мл или 1 штуку)
+    quantity: Annotated[int, Field(ge=0)]  # Общий объем/количество в единицах
+    unit: Annotated[str, Field(max_length=20)]  # 'milliliters' или 'pieces'
 
 
 class ProductUpdate(BaseModel):
@@ -166,11 +167,12 @@ class ProductUpdate(BaseModel):
 
 
 class ProductDB(BaseModel):
-    """Модель для получения информации о товаре из базы данных"""
+    """Модель для получения информации о товаре из базы данных
+    Хранит общий объем/количество товара"""
     id: id_int
     name: name_str
-    price: price_type
-    quantity: int
+    price: price_type  # Цена за единицу (за 1 мл или 1 штуку)
+    quantity: int  # Общий объем/количество в единицах
     unit: str
     created_at: datetime
 
@@ -180,13 +182,14 @@ class ProductDB(BaseModel):
 
 # Cash Register schemas
 class TransactionCreate(BaseModel):
-    """Модель для создания новой транзакции"""
+    """Модель для создания новой транзакции
+    При использовании товаров, стоимость товаров вычитается из общей суммы транзакции"""
     offering_id: Optional[id_int] = None
     product_id: Optional[id_int] = None
     product_quantity_used: Optional[Annotated[int, Field(ge=0)]] = None
     overtime_amount: Optional[price_type] = None
-    total_amount: price_type
-    transaction_type: Annotated[str, Field(max_length=20)]  # 'income' or 'expense'
+    total_amount: int  # Общая сумма, из которой будет вычтена стоимость товаров (может быть отрицательной до обработки)
+    transaction_type: Annotated[str, Field(max_length=20)]  # 'income', 'expense', or 'collection'
     transaction_date: date
 
 
@@ -196,20 +199,21 @@ class TransactionUpdate(BaseModel):
     product_id: Optional[id_int] = None
     product_quantity_used: Optional[Annotated[int, Field(ge=0)]] = None
     overtime_amount: Optional[price_type] = None
-    total_amount: Optional[price_type] = None
-    transaction_type: Optional[Annotated[str, Field(max_length=20)]] = None
+    total_amount: Optional[int] = None
+    transaction_type: Optional[Annotated[str, Field(max_length=20)]] = None  # 'income', 'expense', or 'collection'
     transaction_date: Optional[date] = None
 
 
 class TransactionDB(BaseModel):
-    """Модель для получения информации о транзакции из базы данных"""
+    """Модель для получения информации о транзакции из базы данных
+    Сумма транзакции уже учитывает вычет стоимости использованных товаров"""
     id: id_int
     offering_id: Optional[id_int] = None
     product_id: Optional[id_int] = None
     product_quantity_used: Optional[int] = None
     overtime_amount: Optional[price_type] = None
-    total_amount: price_type
-    transaction_type: str
+    total_amount: int  # Скорректированная сумма с учетом стоимости товаров (неотрицательная)
+    transaction_type: str  # 'income', 'expense', or 'collection'
     transaction_date: date
     created_at: datetime
 
@@ -220,6 +224,6 @@ class TransactionDB(BaseModel):
 class CashSummary(BaseModel):
     """Модель для получения сводной информации о кассе"""
     date: date
-    income: price_type
-    expenses: price_type
-    balance: price_type
+    income: int
+    expenses: int
+    balance: int

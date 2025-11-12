@@ -53,7 +53,7 @@ class Service(Base):
         back_populates='service',
         cascade='all, delete-orphan',
         passive_deletes=True
-    )
+)
 
 
 class Product(Base):
@@ -62,8 +62,8 @@ class Product(Base):
     # Основные поля в таблице
     id: Mapped[int_pk]
     name: Mapped[str] = mapped_column(String(100))
-    price: Mapped[int]  # Цена в сомах (целое число)
-    quantity: Mapped[int]  # Количество в единицах (миллилитры или штуки)
+    price: Mapped[int]  # Цена за единицу в сомах (за 1 мл или 1 штуку)
+    quantity: Mapped[int]  # Общий объем/количество в единицах (миллилитры или штуки)
     unit: Mapped[str] = mapped_column(String(20))  # Единица измерения ('milliliters' или 'pieces')
     created_at: Mapped[creation_time]
 
@@ -144,9 +144,9 @@ class Transaction(Base):
     # Overtime amount (optional)
     overtime_amount: Mapped[int | None]  # Amount in som
     # Total transaction amount (calculated)
-    total_amount: Mapped[int]  # Amount in som
-    # Transaction type (income or expense)
-    transaction_type: Mapped[str] = mapped_column(String(20))  # 'income' or 'expense'
+    total_amount: Mapped[int]  # Amount in som (adjusted for product costs)
+    # Transaction type (income, expense, or collection)
+    transaction_type: Mapped[str] = mapped_column(String(20))  # 'income', 'expense', or 'collection'
     # Date of transaction
     transaction_date: Mapped[date]
     # Creation timestamp

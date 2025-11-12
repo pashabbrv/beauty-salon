@@ -133,7 +133,7 @@ export default function AdminProducts() {
             <div>
               <CardTitle>Товары</CardTitle>
               <CardDescription>
-                Список всех товаров салона
+                Список всех товаров салона. Количество отражает общий объем/запас товара.
               </CardDescription>
             </div>
             <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
@@ -147,7 +147,7 @@ export default function AdminProducts() {
                 <DialogHeader>
                   <DialogTitle>Добавить новый товар</DialogTitle>
                   <DialogDescription>
-                    Введите информацию о новом товаре
+                    Введите информацию о новом товаре. Количество указывается как общий объем/запас.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -174,13 +174,13 @@ export default function AdminProducts() {
                         type="number"
                         value={newProduct.price || ''}
                         onChange={(e) => setNewProduct({...newProduct, price: parseInt(e.target.value) || 0})}
-                        placeholder="Цена"
+                        placeholder="Цена за единицу"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="product-quantity" className="text-right">
-                      Количество
+                      Общий объем/запас
                     </Label>
                     <div className="col-span-3">
                       <Input
@@ -188,7 +188,7 @@ export default function AdminProducts() {
                         type="number"
                         value={newProduct.quantity || ''}
                         onChange={(e) => setNewProduct({...newProduct, quantity: parseInt(e.target.value) || 0})}
-                        placeholder="Количество"
+                        placeholder="Общий объем/запас"
                       />
                     </div>
                   </div>
@@ -230,8 +230,8 @@ export default function AdminProducts() {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Название</TableHead>
-                <TableHead>Цена (сом)</TableHead>
-                <TableHead>Количество</TableHead>
+                <TableHead>Цена за единицу (сом)</TableHead>
+                <TableHead>Общий объем/запас</TableHead>
                 <TableHead>Единица измерения</TableHead>
                 <TableHead>Дата добавления</TableHead>
                 <TableHead className="text-right">Действия</TableHead>
@@ -267,7 +267,7 @@ export default function AdminProducts() {
           <DialogHeader>
             <DialogTitle>Редактировать товар</DialogTitle>
             <DialogDescription>
-              Измените информацию о товаре
+              Измените информацию о товаре. Количество указывается как общий объем/запас.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -286,7 +286,7 @@ export default function AdminProducts() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-product-price" className="text-right">
-                Цена (сом)
+                Цена за единицу (сом)
               </Label>
               <div className="col-span-3">
                 <Input
@@ -294,13 +294,13 @@ export default function AdminProducts() {
                   type="number"
                   value={editProductData.price || ''}
                   onChange={(e) => setEditProductData({...editProductData, price: parseInt(e.target.value) || 0})}
-                  placeholder="Цена"
+                  placeholder="Цена за единицу"
                 />
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-product-quantity" className="text-right">
-                Количество
+                Общий объем/запас
               </Label>
               <div className="col-span-3">
                 <Input
@@ -308,7 +308,7 @@ export default function AdminProducts() {
                   type="number"
                   value={editProductData.quantity || ''}
                   onChange={(e) => setEditProductData({...editProductData, quantity: parseInt(e.target.value) || 0})}
-                  placeholder="Количество"
+                  placeholder="Общий объем/запас"
                 />
               </div>
             </div>

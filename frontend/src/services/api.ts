@@ -699,8 +699,26 @@ class AdminApiService {
     });
   }
 
+  async collectMoney(amount: number, transactionDate?: string, notes?: string): Promise<Transaction> {
+    console.log('COLLECT MONEY: Sending request', { amount, transactionDate, notes });
+    const result = await this.request<Transaction>('/cash-register/collect/', {
+      method: 'POST',
+      body: JSON.stringify({
+        amount,
+        transaction_date: transactionDate,
+        notes: notes
+      }),
+      headers: {
+        'Auth-Token': this.authToken || '',
+      },
+    });
+    console.log('COLLECT MONEY: Response received', result);
+    return result;
+  }
+
   async withdrawMoney(amount: number, transactionDate?: string): Promise<Transaction> {
-    return this.request<Transaction>('/cash-register/withdraw/', {
+    console.log('WITHDRAW MONEY: Sending request', { amount, transactionDate });
+    const result = await this.request<Transaction>('/cash-register/withdraw/', {
       method: 'POST',
       body: JSON.stringify({
         amount,
@@ -710,10 +728,13 @@ class AdminApiService {
         'Auth-Token': this.authToken || '',
       },
     });
+    console.log('WITHDRAW MONEY: Response received', result);
+    return result;
   }
 
   async depositMoney(amount: number, transactionDate?: string): Promise<Transaction> {
-    return this.request<Transaction>('/cash-register/deposit/', {
+    console.log('DEPOSIT MONEY: Sending request', { amount, transactionDate });
+    const result = await this.request<Transaction>('/cash-register/deposit/', {
       method: 'POST',
       body: JSON.stringify({
         amount,
@@ -723,6 +744,8 @@ class AdminApiService {
         'Auth-Token': this.authToken || '',
       },
     });
+    console.log('DEPOSIT MONEY: Response received', result);
+    return result;
   }
 
   async deleteTransaction(transactionId: number): Promise<void> {

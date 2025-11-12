@@ -2,7 +2,8 @@ from fastapi import APIRouter, status, Body, Depends, Path, HTTPException, Query
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, List, Optional
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+import json
 
 from core.auth import verify_token
 from core.schemas import TransactionCreate, TransactionDB, CashSummary
@@ -31,7 +32,10 @@ async def create_transaction(
             detail='At least one of offering_id, product_id, or overtime_amount must be provided'
         )
     
+    total_amount = transaction.total_amount
+    
     # Validate offering exists if provided
+    offering = None
     if transaction.offering_id:
         offering = await select_one(session, Offering, {'id': transaction.offering_id})
         if offering is None:
@@ -41,6 +45,7 @@ async def create_transaction(
             )
     
     # Validate product exists if provided
+    product = None
     if transaction.product_id:
         product = await select_one(session, Product, {'id': transaction.product_id})
         if product is None:
@@ -60,14 +65,32 @@ async def create_transaction(
         if transaction.product_quantity_used:
             product.quantity -= transaction.product_quantity_used
             session.add(product)
+            
+            # Calculate the cost of the product used and adjust total amount
+            if product.price and transaction.product_quantity_used:
+                # Calculate product cost based on unit price
+                # Price is per unit (ml or piece), so multiply by quantity used
+                product_cost = product.price * transaction.product_quantity_used
+                
+                # Adjust total amount by subtracting product cost
+                # This ensures we only record the service value, not the product cost
+                if transaction.transaction_type == 'income':
+                    total_amount = transaction.total_amount - product_cost
     
-    # Create the transaction
+    # Ensure total_amount is not negative for income transactions
+    if transaction.transaction_type == 'income' and total_amount < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Transaction amount cannot be negative. Service cost (after product deduction): {total_amount}'
+        )
+    
+    # Create the transaction with adjusted total amount
     new_transaction = Transaction(
         offering_id=transaction.offering_id,
         product_id=transaction.product_id,
         product_quantity_used=transaction.product_quantity_used,
         overtime_amount=transaction.overtime_amount,
-        total_amount=transaction.total_amount,
+        total_amount=max(0, total_amount),  # Ensure non-negative value
         transaction_type=transaction.transaction_type,
         transaction_date=transaction.transaction_date
     )
@@ -122,7 +145,7 @@ async def get_cash_summary(
     if summary_date is None:
         summary_date = date.today()
     
-    # Calculate income for the date
+    # Calculate income for the date (only 'income' type transactions)
     income_query = select(func.coalesce(func.sum(Transaction.total_amount), 0)).where(
         and_(
             Transaction.transaction_date == summary_date,
@@ -133,7 +156,7 @@ async def get_cash_summary(
     income_result = await session.execute(income_query)
     income = income_result.scalar() or 0
     
-    # Calculate expenses for the date
+    # Calculate expenses for the date (only 'expense' type transactions, not collections)
     expense_query = select(func.coalesce(func.sum(Transaction.total_amount), 0)).where(
         and_(
             Transaction.transaction_date == summary_date,
@@ -144,14 +167,26 @@ async def get_cash_summary(
     expense_result = await session.execute(expense_query)
     expenses = expense_result.scalar() or 0
     
-    # Calculate balance
-    balance = income - expenses
+    # Calculate balance (income - expenses - collections)
+    # First get collections for the date
+    collection_query = select(func.coalesce(func.sum(Transaction.total_amount), 0)).where(
+        and_(
+            Transaction.transaction_date == summary_date,
+            Transaction.transaction_type == 'collection'
+        )
+    )
+    
+    collection_result = await session.execute(collection_query)
+    collections = collection_result.scalar() or 0
+    
+    # Balance is income minus expenses minus collections
+    balance = income - expenses - collections
     
     return CashSummary(
         date=summary_date,
-        income=income,
-        expenses=expenses,
-        balance=balance
+        income=int(income),
+        expenses=int(expenses),
+        balance=int(balance)
     )
 
 
@@ -166,20 +201,24 @@ async def get_cash_summary_range(
     end_date: Annotated[date, Query()]
 ):
     """Получение сводной информации о кассе за период"""
-    # Get all dates in the range
-    date_range_query = select(Transaction.transaction_date).where(
-        and_(
-            Transaction.transaction_date >= start_date,
-            Transaction.transaction_date <= end_date
+    # Validate date range
+    if start_date > end_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Start date must be before or equal to end date'
         )
-    ).distinct().order_by(Transaction.transaction_date)
     
-    date_result = await session.execute(date_range_query)
-    dates = [row[0] for row in date_result.fetchall()]
+    # Generate all dates in the range
+    date_range = []
+    current_date = start_date
+    while current_date <= end_date:
+        date_range.append(current_date)
+        # Move to next day
+        current_date = date.fromordinal(current_date.toordinal() + 1)
     
     summaries = []
-    for summary_date in dates:
-        # Calculate income for the date
+    for summary_date in date_range:
+        # Calculate income for the date (only 'income' type transactions)
         income_query = select(func.coalesce(func.sum(Transaction.total_amount), 0)).where(
             and_(
                 Transaction.transaction_date == summary_date,
@@ -190,7 +229,7 @@ async def get_cash_summary_range(
         income_result = await session.execute(income_query)
         income = income_result.scalar() or 0
         
-        # Calculate expenses for the date
+        # Calculate expenses for the date (only 'expense' type transactions, not collections)
         expense_query = select(func.coalesce(func.sum(Transaction.total_amount), 0)).where(
             and_(
                 Transaction.transaction_date == summary_date,
@@ -201,14 +240,25 @@ async def get_cash_summary_range(
         expense_result = await session.execute(expense_query)
         expenses = expense_result.scalar() or 0
         
-        # Calculate balance
-        balance = income - expenses
+        # Calculate collections for the date (only 'collection' type transactions)
+        collection_query = select(func.coalesce(func.sum(Transaction.total_amount), 0)).where(
+            and_(
+                Transaction.transaction_date == summary_date,
+                Transaction.transaction_type == 'collection'
+            )
+        )
+        
+        collection_result = await session.execute(collection_query)
+        collections = collection_result.scalar() or 0
+        
+        # Balance is income minus expenses minus collections
+        balance = income - expenses - collections
         
         summaries.append(CashSummary(
             date=summary_date,
-            income=income,
-            expenses=expenses,
-            balance=balance
+            income=int(income),
+            expenses=int(expenses),
+            balance=int(balance)
         ))
     
     return summaries
@@ -223,22 +273,37 @@ async def get_cash_summary_range(
 async def withdraw_money(
     session: Annotated[AsyncSession, Depends(get_session)],
     amount: Annotated[int, Body()],
-    transaction_date: Annotated[date, Body()] = None
+    transaction_date: Annotated[str, Body()] = None
 ):
     """Снятие денег из кассы (расход)"""
-    if transaction_date is None:
-        transaction_date = date.today()
+    print(f"WITHDRAW: Received request with amount={amount}, transaction_date={transaction_date}")
+    
+    # Parse the date if provided
+    if transaction_date:
+        try:
+            parsed_date = date.fromisoformat(transaction_date)
+            print(f"WITHDRAW: Parsed date successfully: {parsed_date}")
+        except (ValueError, TypeError) as e:
+            print(f"WITHDRAW: Error parsing date: {e}")
+            parsed_date = date.today()
+    else:
+        parsed_date = date.today()
+        print(f"WITHDRAW: Using today's date: {parsed_date}")
     
     # Create expense transaction
     new_transaction = Transaction(
         total_amount=amount,
         transaction_type='expense',
-        transaction_date=transaction_date
+        transaction_date=parsed_date
     )
+    
+    print(f"WITHDRAW: Creating transaction with amount={amount}, type=expense, date={parsed_date}")
     
     session.add(new_transaction)
     await session.commit()
     await session.refresh(new_transaction)
+    
+    print(f"WITHDRAW: Transaction created successfully with ID={new_transaction.id}")
     
     return TransactionDB.model_validate(new_transaction, from_attributes=True)
 
@@ -252,21 +317,81 @@ async def withdraw_money(
 async def deposit_money(
     session: Annotated[AsyncSession, Depends(get_session)],
     amount: Annotated[int, Body()],
-    transaction_date: Annotated[date, Body()] = None
+    transaction_date: Annotated[str, Body()] = None
 ):
     """Добавление денег в кассу (доход)"""
-    if transaction_date is None:
-        transaction_date = date.today()
+    print(f"DEPOSIT: Received request with amount={amount}, transaction_date={transaction_date}")
+    
+    # Parse the date if provided
+    if transaction_date:
+        try:
+            parsed_date = date.fromisoformat(transaction_date)
+            print(f"DEPOSIT: Parsed date successfully: {parsed_date}")
+        except (ValueError, TypeError) as e:
+            print(f"DEPOSIT: Error parsing date: {e}")
+            parsed_date = date.today()
+    else:
+        parsed_date = date.today()
+        print(f"DEPOSIT: Using today's date: {parsed_date}")
     
     # Create income transaction
     new_transaction = Transaction(
         total_amount=amount,
         transaction_type='income',
-        transaction_date=transaction_date
+        transaction_date=parsed_date
     )
+    
+    print(f"DEPOSIT: Creating transaction with amount={amount}, type=income, date={parsed_date}")
     
     session.add(new_transaction)
     await session.commit()
     await session.refresh(new_transaction)
+    
+    print(f"DEPOSIT: Transaction created successfully with ID={new_transaction.id}")
+    
+    return TransactionDB.model_validate(new_transaction, from_attributes=True)
+
+
+@basic_router.post(
+    '/collect/',
+    response_model=TransactionDB,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(verify_token)]
+)
+async def collect_money(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    amount: Annotated[int, Body()],
+    transaction_date: Annotated[str, Body()] = None,
+    notes: Annotated[str, Body()] = None
+):
+    """Инкассация - изъятие денег из кассы без учета как расхода"""
+    print(f"COLLECT: Received request with amount={amount}, transaction_date={transaction_date}, notes={notes}")
+    
+    # Parse the date if provided
+    if transaction_date:
+        try:
+            parsed_date = date.fromisoformat(transaction_date)
+            print(f"COLLECT: Parsed date successfully: {parsed_date}")
+        except (ValueError, TypeError) as e:
+            print(f"COLLECT: Error parsing date: {e}")
+            parsed_date = date.today()
+    else:
+        parsed_date = date.today()
+        print(f"COLLECT: Using today's date: {parsed_date}")
+    
+    # Create collection transaction (expense type but with special notes)
+    new_transaction = Transaction(
+        total_amount=amount,
+        transaction_type='collection',  # Special type for collections
+        transaction_date=parsed_date
+    )
+    
+    print(f"COLLECT: Creating transaction with amount={amount}, type=collection, date={parsed_date}")
+    
+    session.add(new_transaction)
+    await session.commit()
+    await session.refresh(new_transaction)
+    
+    print(f"COLLECT: Transaction created successfully with ID={new_transaction.id}")
     
     return TransactionDB.model_validate(new_transaction, from_attributes=True)
