@@ -138,18 +138,19 @@ export default function AdminCashRegister() {
         return;
       }
       
-      // Calculate product cost if product is selected
-      let productCost = 0;
-      if (selectedProduct && productQuantity > 0) {
-        const product = products.find(p => p.id === selectedProduct);
-        if (product) {
-          productCost = product.price * productQuantity;
-        }
+      // Calculate the total amount to be recorded
+      let calculatedTotalAmount = totalAmount;
+      if (!totalAmount || totalAmount <= 0) {
+        // Automatically calculate total amount if not provided or zero
+        const serviceCost = calculateServiceCost();
+        const productCost = calculateProductCost();
+        calculatedTotalAmount = serviceCost + productCost + (overtimeAmount || 0);
       }
       
       // Validate total amount
-      if (transactionType === 'income' && totalAmount < productCost) {
-        setError(`Общая сумма (${totalAmount}) не может быть меньше стоимости товара (${productCost})`);
+      const productCost = calculateProductCost();
+      if (transactionType === 'income' && calculatedTotalAmount < productCost) {
+        setError(`Общая сумма (${calculatedTotalAmount}) не может быть меньше стоимости товара (${productCost})`);
         return;
       }
       
@@ -158,7 +159,7 @@ export default function AdminCashRegister() {
         product_id: selectedProduct,
         product_quantity_used: selectedProduct ? productQuantity : null,
         overtime_amount: overtimeAmount || null,
-        total_amount: totalAmount,
+        total_amount: calculatedTotalAmount,
         transaction_type: transactionType,
         transaction_date: transactionDate
       };
@@ -279,6 +280,32 @@ export default function AdminCashRegister() {
       }
     }
     return 0;
+  };
+
+  // Calculate service cost for display
+  const calculateServiceCost = () => {
+    if (selectedOffering) {
+      const offering = offerings.find(o => o.id === selectedOffering);
+      if (offering) {
+        return offering.price;
+      }
+    }
+    return 0;
+  };
+
+  // Calculate automatically if totalAmount is not set
+  const calculateAutoTotalAmount = () => {
+    const serviceCost = calculateServiceCost();
+    const productCost = calculateProductCost();
+    return serviceCost + productCost + (overtimeAmount || 0);
+  };
+
+  // Calculate what will actually be recorded
+  const calculateRecordedAmount = () => {
+    if (totalAmount > 0) {
+      return totalAmount;
+    }
+    return calculateAutoTotalAmount();
   };
 
   // Calculate adjusted amount for display
@@ -535,7 +562,8 @@ export default function AdminCashRegister() {
               {selectedProduct && productQuantity > 0 && (
                 <div className="text-sm p-2 bg-blue-50 rounded">
                   <p>Стоимость товара: {calculateProductCost()} сом</p>
-                  <p className="font-medium">Итоговая сумма: {calculateAdjustedAmount()} сом</p>
+                  <p>Стоимость услуги: {calculateServiceCost()} сом</p>
+                  <p className="font-medium">Общая сумма: {calculateRecordedAmount()} сом</p>
                 </div>
               )}
             </div>

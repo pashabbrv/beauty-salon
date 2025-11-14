@@ -32,10 +32,12 @@ async def create_transaction(
             detail='At least one of offering_id, product_id, or overtime_amount must be provided'
         )
     
+    # Initialize total_amount
     total_amount = transaction.total_amount
     
     # Validate offering exists if provided
     offering = None
+    offering_cost = 0
     if transaction.offering_id:
         offering = await select_one(session, Offering, {'id': transaction.offering_id})
         if offering is None:
@@ -43,9 +45,11 @@ async def create_transaction(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail='Offering with such id doesn\'t exist'
             )
+        offering_cost = offering.price
     
     # Validate product exists if provided
     product = None
+    product_cost = 0
     if transaction.product_id:
         product = await select_one(session, Product, {'id': transaction.product_id})
         if product is None:
@@ -66,25 +70,22 @@ async def create_transaction(
             product.quantity -= transaction.product_quantity_used
             session.add(product)
             
-            # Calculate the cost of the product used and adjust total amount
+            # Calculate product cost
             if product.price and transaction.product_quantity_used:
-                # Calculate product cost based on unit price
-                # Price is per unit (ml or piece), so multiply by quantity used
                 product_cost = product.price * transaction.product_quantity_used
-                
-                # Adjust total amount by subtracting product cost
-                # This ensures we only record the service value, not the product cost
-                if transaction.transaction_type == 'income':
-                    total_amount = transaction.total_amount - product_cost
+    
+    # If total_amount is 0 or negative, calculate it automatically
+    if total_amount <= 0:
+        total_amount = offering_cost + product_cost + (transaction.overtime_amount or 0)
     
     # Ensure total_amount is not negative for income transactions
     if transaction.transaction_type == 'income' and total_amount < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Transaction amount cannot be negative. Service cost (after product deduction): {total_amount}'
+            detail=f'Transaction amount cannot be negative. Calculated amount: {total_amount}'
         )
     
-    # Create the transaction with adjusted total amount
+    # Create the transaction with calculated or provided total amount
     new_transaction = Transaction(
         offering_id=transaction.offering_id,
         product_id=transaction.product_id,
