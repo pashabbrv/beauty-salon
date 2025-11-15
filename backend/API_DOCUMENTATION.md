@@ -200,6 +200,29 @@ DELETE /masters/{master_id}/
 ```
 Delete an existing master.
 
+#### Upload Master Photo
+```
+POST /masters/{master_id}/photo/
+```
+Upload or update a master's photo and optionally update their description.
+
+**Request Format:** `multipart/form-data`
+
+**Form Parameters:**
+- `file` (required): The image file to upload (allowed formats: .jpg, .jpeg, .png, .webp)
+- `description` (optional): Updated description for the master
+
+**Response:**
+```json
+{
+  "id": 1,
+  "phone": "+996123456789",
+  "name": "Alice Smith",
+  "photo_url": "/media/masters/master_1_a1b2c3d4e5f6.jpg",
+  "description": "Experienced hair stylist"
+}
+```
+
 ### 3. Services
 
 #### Get All Services
@@ -869,8 +892,10 @@ Record money collection from the cash register (not counted as an expense).
 | Field | Type | Description |
 |-------|------|-------------|
 | id | integer | Unique identifier |
-| phone | string | Master's phone number |
-| name | string | Master's name |
+| phone | string | Master's phone number (2-20 characters) |
+| name | string | Master's name (2-100 characters) |
+| photo_url | string (optional) | URL to master's photo (max 255 characters) |
+| description | string (optional) | Master's description (max 500 characters) |
 
 ### Service
 | Field | Type | Description |
@@ -921,6 +946,43 @@ Record money collection from the cash register (not counted as an expense).
 | transaction_type | string | Type (income/expense/collection) |
 | transaction_date | date | Transaction date |
 | created_at | datetime | Creation timestamp |
+
+## Media Files
+
+Master photos and other media files are served statically from the `/media` endpoint.
+
+### Accessing Media Files
+```
+GET /media/masters/{filename}
+```
+Retrieve a master's photo by filename.
+
+Example URL: `http://localhost:8000/media/masters/master_1_a1b2c3d4e5f6.jpg`
+
+### Frontend Usage Examples
+
+#### Uploading a Master Photo
+
+To upload a master photo from the frontend, use a multipart/form-data POST request:
+
+```javascript
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+formData.append('description', 'Experienced hair stylist');
+
+fetch(`${API_BASE_URL}/masters/${masterId}/photo/`, {
+  method: 'POST',
+  headers: {
+    'Auth-Token': authToken
+  },
+  body: formData
+})
+.then(response => response.json())
+.then(data => console.log('Master updated:', data))
+.catch(error => console.error('Error:', error));
+```
+
+Note: Do not set the `Content-Type` header when uploading files, as the browser will automatically set it to `multipart/form-data` with the correct boundary.
 
 ## Error Responses
 
