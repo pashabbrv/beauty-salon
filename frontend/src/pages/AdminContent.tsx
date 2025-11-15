@@ -100,9 +100,9 @@ export default function AdminContent() {
     }
   };
 
-    const handleCreateMaster = async () => {
+  const handleCreateMaster = async () => {
     if (!newMasterName.trim() || !newMasterPhone.trim()) return;
-    
+
     const formattedPhone = formatPhoneNumber(newMasterPhone);
     if (!formattedPhone || !isValidPhoneNumber(formattedPhone)) {
       alert('Пожалуйста, введите корректный номер телефона (+7 или +996)');
@@ -110,25 +110,26 @@ export default function AdminContent() {
     }
 
     try {
-      // 1) Сначала создаём мастера БЕЗ фото
-      const createdMaster = await adminApiService.createMaster({
+      // 1. Создаём мастера (URL кладём сразу)
+      const baseMaster = await adminApiService.createMaster({
         name: newMasterName.trim(),
         phone: formattedPhone,
         description: newMasterDescription.trim() || undefined,
+        photo_url: newMasterPhoto.trim() || undefined, // только обычный URL
       });
 
-      let finalMaster = createdMaster;
+      let finalMaster = baseMaster;
 
-      // 2) Если выбран файл — загружаем его отдельным запросом
+      // 2. Если выбран файл — докидываем фото отдельным запросом
       if (newMasterFile) {
         try {
           finalMaster = await adminApiService.uploadMasterPhoto(
-            createdMaster.id,
-            newMasterFile
+            baseMaster.id,
+            newMasterFile,
+            newMasterDescription.trim() || undefined,
           );
         } catch (e) {
-          console.error("Ошибка при загрузке фото мастера:", e);
-          alert("Мастер создан, но фото не удалось загрузить");
+          alert('Мастер создан, но фото не удалось загрузить');
         }
       }
 
@@ -139,10 +140,14 @@ export default function AdminContent() {
       setNewMasterPhoto('');
       setNewMasterFile(null);
       setIsMasterDialogOpen(false);
+
       alert('Мастер успешно добавлен!');
     } catch (error: any) {
       console.error('Failed to create master:', error);
-      const errorMessage = error?.message || error?.response?.data?.detail || 'Ошибка при создании мастера';
+      const errorMessage =
+        error?.message ||
+        error?.response?.data?.detail ||
+        'Ошибка при создании мастера';
       alert(`Ошибка: ${errorMessage}`);
     }
   };
@@ -214,61 +219,55 @@ export default function AdminContent() {
 
   const handleUpdateMaster = async () => {
     if (!editingMaster || !editMasterName.trim() || !editMasterPhone.trim()) return;
-    
+
     const formattedPhone = formatPhoneNumber(editMasterPhone);
     if (!formattedPhone || !isValidPhoneNumber(formattedPhone)) {
       alert('Пожалуйста, введите корректный номер телефона (+7 или +996)');
       return;
     }
-    
+
     try {
       const updateData: { name: string; phone: string; description?: string; photo_url?: string } = {
         name: editMasterName.trim(),
         phone: formattedPhone,
       };
-      
+
       if (editMasterDescription.trim()) {
         updateData.description = editMasterDescription.trim();
       }
-      
-      // Handle file upload
-      if (editMasterFile) {
-        // Convert file to data URL
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const dataUrl = reader.result as string;
-          updateData.photo_url = dataUrl;
-          
-          const updatedMaster = await adminApiService.updateMaster(editingMaster.id, updateData);
-          setMasters(masters.map(master => 
-            master.id === updatedMaster.id ? updatedMaster : master
-          ));
-          setIsEditMasterDialogOpen(false);
-          setEditingMaster(null);
-          setEditMasterPhoto('');
-          setEditMasterFile(null);
-          alert('Мастер успешно обновлен!');
-        };
-        reader.readAsDataURL(editMasterFile);
-        return; // Return early to prevent double submission
-      }
-      
       if (editMasterPhoto.trim()) {
-        updateData.photo_url = editMasterPhoto.trim();
+        updateData.photo_url = editMasterPhoto.trim(); // только URL
       }
-      
-      const updatedMaster = await adminApiService.updateMaster(editingMaster.id, updateData);
-      setMasters(masters.map(master => 
-        master.id === updatedMaster.id ? updatedMaster : master
-      ));
+
+      // 1. Обновляем базовые данные мастера
+      let updatedMaster = await adminApiService.updateMaster(editingMaster.id, updateData);
+
+      // 2. Если выбран новый файл — загружаем его
+      if (editMasterFile) {
+        try {
+          updatedMaster = await adminApiService.uploadMasterPhoto(
+            editingMaster.id,
+            editMasterFile,
+            editMasterDescription.trim() || undefined,
+          );
+        } catch (e) {
+          alert('Мастер обновлён, но фото не удалось загрузить');
+        }
+      }
+
+      setMasters(masters.map(m => (m.id === updatedMaster.id ? updatedMaster : m)));
       setIsEditMasterDialogOpen(false);
       setEditingMaster(null);
       setEditMasterPhoto('');
       setEditMasterFile(null);
-      alert('Мастер успешно обновлен!');
+
+      alert('Мастер успешно обновлён!');
     } catch (error: any) {
       console.error('Failed to update master:', error);
-      const errorMessage = error?.message || error?.response?.data?.detail || 'Ошибка при обновлении мастера';
+      const errorMessage =
+        error?.message ||
+        error?.response?.data?.detail ||
+        'Ошибка при обновлении мастера';
       alert(`Ошибка: ${errorMessage}`);
     }
   };

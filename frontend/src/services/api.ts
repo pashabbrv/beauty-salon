@@ -272,35 +272,28 @@ class AdminApiService {
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.88';
-
-    // Remove trailing slash if present
     const cleanApiUrl = API_BASE_URL.replace(/\/$/, '');
-    
-    // Ensure the endpoint starts with /
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    
     const url = `${cleanApiUrl}${cleanEndpoint}`;
-    
-    const defaultOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    };
 
-    // Add auth token to headers if available
-    if (this.authToken) {
-      (defaultOptions.headers as Record<string, string>)['Auth-Token'] = this.authToken;
-      console.log(`Sending request to ${url} with token: ${this.authToken}`);
-    } else {
-      // Try to get token from localStorage as fallback
-      const storedToken = localStorage.getItem('adminToken');
-      if (storedToken) {
-        (defaultOptions.headers as Record<string, string>)['Auth-Token'] = storedToken;
-        console.log(`Sending request to ${url} with stored token: ${storedToken}`);
-      } else {
-        console.log(`Sending request to ${url} without token`);
-      }
+    const isFormData = options?.body instanceof FormData;
+
+    const defaultHeaders: Record<string, string> = {};
+
+    // Content-Type ставим только если это НЕ FormData
+    if (!isFormData) {
+      defaultHeaders['Content-Type'] = 'application/json';
     }
+
+    // Токен
+    const token = this.authToken || localStorage.getItem('adminToken');
+    if (token) {
+      defaultHeaders['Auth-Token'] = token;
+    }
+
+    const defaultOptions: RequestInit = {
+      headers: defaultHeaders,
+    };
 
     const config: RequestInit = {
       ...defaultOptions,
@@ -311,24 +304,18 @@ class AdminApiService {
       },
     };
 
-    try {
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        console.error(`HTTP error! status: ${response.status}`, await response.text());
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    const response = await fetch(url, config);
 
-      // For status 204 (No Content) don't try to parse JSON
-      if (response.status === 204) {
-        return {} as T;
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
+    if (!response.ok) {
+      console.error(`HTTP error! status: ${response.status}`, await response.text());
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    if (response.status === 204) {
+      return {} as T;
+    }
+
+    return await response.json();
   }
 
   // Authentication endpoints
@@ -795,13 +782,18 @@ class AdminApiService {
     });
   }
   
-  async uploadMasterPhoto(masterId: number, file: File): Promise<Master> {
+  async uploadMasterPhoto(masterId: number, file: File, description?: string): Promise<Master> {
     const formData = new FormData();
     formData.append("file", file);
+    if (description) {
+      formData.append("description", description);
+    }
 
     return this.request<Master>(`/masters/${masterId}/photo/`, {
       method: "POST",
       body: formData,
+      // Внимание: НЕ ставим здесь Content-Type,
+      // request() сам поймет, что это FormData, и не добавит application/json
     });
   }
 

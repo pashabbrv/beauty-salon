@@ -20,9 +20,9 @@ from db.queries import select_all, select_one, insert_one
 masters_router = APIRouter(prefix='/masters')
 
 # Папка для загрузки фото мастеров
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # backend/app
-MEDIA_DIR = os.path.join(BASE_DIR, "media", "masters")
-os.makedirs(MEDIA_DIR, exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent.parent  # backend/app
+MEDIA_DIR = BASE_DIR / "media" / "masters"
+MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @masters_router.get('/', response_model=list[MasterDB])
@@ -139,7 +139,6 @@ async def upload_master_photo(
             detail='Master not found'
         )
 
-    # Проверяем расширение файла (базовая защита)
     filename = file.filename or ""
     _, ext = os.path.splitext(filename)
     if ext.lower() not in {'.jpg', '.jpeg', '.png', '.webp'}:
@@ -148,18 +147,14 @@ async def upload_master_photo(
             detail='Only .jpg, .jpeg, .png, .webp files are allowed'
         )
 
-    # Генерируем уникальное имя файла
     new_filename = f"master_{master_id}_{uuid4().hex}{ext.lower()}"
-    file_path = UPLOAD_DIR / new_filename
+    file_path = MEDIA_DIR / new_filename
 
-    # Сохраняем файл
     content = await file.read()
     file_path.write_bytes(content)
 
-    # Формируем относительный URL (будет доступен по /media/masters/...)
     relative_url = f"/media/masters/{new_filename}"
 
-    # Обновляем мастера
     master.photo_url = relative_url
     if description is not None:
         master.description = description
