@@ -7,6 +7,8 @@ export interface Master {
   id: number;
   name: string;
   phone: string;
+  description?: string;
+  photo_url?: string;
   specialization?: string;
   rating?: number;
   avatar?: string;
@@ -168,6 +170,10 @@ class ApiService {
   // Шаг 2: Получить список услуг
   async getServices(): Promise<Service[]> {
     return this.request<Service[]>('/services/');
+  }
+
+  async getMasters(): Promise<Master[]> {
+    return this.request<Master[]>('/masters/');
   }
 
   // Шаг 3: Получить офферинги по услуге
@@ -516,15 +522,14 @@ class AdminApiService {
     return this.request<Master[]>('/masters/');
   }
 
-  async createMaster(master: { name: string; phone: string }): Promise<Master> {
+  async createMaster(master: { name: string; phone: string; description?: string; photo_url?: string }): Promise<Master> {
     return this.request<Master>('/masters/', {
       method: 'POST',
       body: JSON.stringify(master)
     });
   }
 
-  // Add update master method
-  async updateMaster(masterId: number, master: { name: string; phone: string }): Promise<Master> {
+  async updateMaster(masterId: number, master: { name: string; phone: string; description?: string; photo_url?: string }): Promise<Master> {
     return this.request<Master>(`/masters/${masterId}/`, {
       method: 'PUT',
       body: JSON.stringify(master)
@@ -787,6 +792,16 @@ class AdminApiService {
       headers: {
         'Auth-Token': this.authToken || '',
       },
+    });
+  }
+  
+  async uploadMasterPhoto(masterId: number, file: File): Promise<Master> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return this.request<Master>(`/masters/${masterId}/photo/`, {
+      method: "POST",
+      body: formData,
     });
   }
 

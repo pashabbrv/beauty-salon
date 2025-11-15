@@ -29,6 +29,8 @@ class MasterInfo(BaseModel):
     \n_(по-умолчанию используется верификация **словаря**)_"""
     phone: phone_str
     name: name_str
+    photo_url: Optional[str] = Field(default=None, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=500)
 
 
 class MasterDB(MasterInfo):

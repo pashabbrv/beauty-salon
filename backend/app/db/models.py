@@ -33,6 +33,9 @@ class Master(Base):
     phone: Mapped[str] = mapped_column(String(20))
     name: Mapped[str] = mapped_column(String(100))
 
+    photo_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # Отношения с другими ORM
     offerings: Mapped[list['Offering']] = relationship(
         back_populates='master',

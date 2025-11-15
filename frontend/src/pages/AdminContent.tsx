@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -15,6 +16,8 @@ export default function AdminContent() {
   const [masters, setMasters] = useState<Master[]>([]);
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editMasterFile, setEditMasterFile] = useState<File | null>(null);
+
   
   // Form states
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
@@ -29,6 +32,9 @@ export default function AdminContent() {
   const [newServiceName, setNewServiceName] = useState('');
   const [newMasterName, setNewMasterName] = useState('');
   const [newMasterPhone, setNewMasterPhone] = useState('');
+  const [newMasterDescription, setNewMasterDescription] = useState('');
+  const [newMasterPhoto, setNewMasterPhoto] = useState<string>('');
+  const [newMasterFile, setNewMasterFile] = useState<File | null>(null);
   
   const [selectedOffering, setSelectedOffering] = useState<{
     master_id: number;
@@ -50,6 +56,8 @@ export default function AdminContent() {
   const [editServiceName, setEditServiceName] = useState('');
   const [editMasterName, setEditMasterName] = useState('');
   const [editMasterPhone, setEditMasterPhone] = useState('');
+  const [editMasterDescription, setEditMasterDescription] = useState('');
+  const [editMasterPhoto, setEditMasterPhoto] = useState<string>('');
   const [editOfferingData, setEditOfferingData] = useState({
     master_id: 0,
     service_id: 0,
@@ -92,29 +100,53 @@ export default function AdminContent() {
     }
   };
 
-  const handleCreateMaster = async () => {
+    const handleCreateMaster = async () => {
     if (!newMasterName.trim() || !newMasterPhone.trim()) return;
     
-    // Format and validate phone number
     const formattedPhone = formatPhoneNumber(newMasterPhone);
     if (!formattedPhone || !isValidPhoneNumber(formattedPhone)) {
       alert('Пожалуйста, введите корректный номер телефона (+7 или +996)');
       return;
     }
-    
+
     try {
-      const newMaster = await adminApiService.createMaster({ 
-        name: newMasterName, 
-        phone: formattedPhone
+      // 1) Сначала создаём мастера БЕЗ фото
+      const createdMaster = await adminApiService.createMaster({
+        name: newMasterName.trim(),
+        phone: formattedPhone,
+        description: newMasterDescription.trim() || undefined,
       });
-      setMasters([...masters, newMaster]);
+
+      let finalMaster = createdMaster;
+
+      // 2) Если выбран файл — загружаем его отдельным запросом
+      if (newMasterFile) {
+        try {
+          finalMaster = await adminApiService.uploadMasterPhoto(
+            createdMaster.id,
+            newMasterFile
+          );
+        } catch (e) {
+          console.error("Ошибка при загрузке фото мастера:", e);
+          alert("Мастер создан, но фото не удалось загрузить");
+        }
+      }
+
+      setMasters([...masters, finalMaster]);
       setNewMasterName('');
       setNewMasterPhone('');
+      setNewMasterDescription('');
+      setNewMasterPhoto('');
+      setNewMasterFile(null);
       setIsMasterDialogOpen(false);
-    } catch (error) {
+      alert('Мастер успешно добавлен!');
+    } catch (error: any) {
       console.error('Failed to create master:', error);
+      const errorMessage = error?.message || error?.response?.data?.detail || 'Ошибка при создании мастера';
+      alert(`Ошибка: ${errorMessage}`);
     }
   };
+
 
   const handleCreateOffering = async () => {
     if (!selectedOffering.master_id || !selectedOffering.service_id || selectedOffering.price <= 0) return;
@@ -145,8 +177,12 @@ export default function AdminContent() {
     setEditingMaster(master);
     setEditMasterName(master.name);
     setEditMasterPhone(master.phone);
+    setEditMasterDescription(master.description || '');
+    setEditMasterPhoto(master.photo_url || '');
+    setEditMasterFile(null);
     setIsEditMasterDialogOpen(true);
   };
+
 
   const handleEditOffering = (offering: Offering) => {
     setEditingOffering(offering);
@@ -179,7 +215,6 @@ export default function AdminContent() {
   const handleUpdateMaster = async () => {
     if (!editingMaster || !editMasterName.trim() || !editMasterPhone.trim()) return;
     
-    // Format and validate phone number
     const formattedPhone = formatPhoneNumber(editMasterPhone);
     if (!formattedPhone || !isValidPhoneNumber(formattedPhone)) {
       alert('Пожалуйста, введите корректный номер телефона (+7 или +996)');
@@ -187,21 +222,57 @@ export default function AdminContent() {
     }
     
     try {
-      const updatedMaster = await adminApiService.updateMaster(editingMaster.id, { 
-        name: editMasterName, 
-        phone: formattedPhone 
-      });
+      const updateData: { name: string; phone: string; description?: string; photo_url?: string } = {
+        name: editMasterName.trim(),
+        phone: formattedPhone,
+      };
+      
+      if (editMasterDescription.trim()) {
+        updateData.description = editMasterDescription.trim();
+      }
+      
+      // Handle file upload
+      if (editMasterFile) {
+        // Convert file to data URL
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const dataUrl = reader.result as string;
+          updateData.photo_url = dataUrl;
+          
+          const updatedMaster = await adminApiService.updateMaster(editingMaster.id, updateData);
+          setMasters(masters.map(master => 
+            master.id === updatedMaster.id ? updatedMaster : master
+          ));
+          setIsEditMasterDialogOpen(false);
+          setEditingMaster(null);
+          setEditMasterPhoto('');
+          setEditMasterFile(null);
+          alert('Мастер успешно обновлен!');
+        };
+        reader.readAsDataURL(editMasterFile);
+        return; // Return early to prevent double submission
+      }
+      
+      if (editMasterPhoto.trim()) {
+        updateData.photo_url = editMasterPhoto.trim();
+      }
+      
+      const updatedMaster = await adminApiService.updateMaster(editingMaster.id, updateData);
       setMasters(masters.map(master => 
         master.id === updatedMaster.id ? updatedMaster : master
       ));
       setIsEditMasterDialogOpen(false);
       setEditingMaster(null);
+      setEditMasterPhoto('');
+      setEditMasterFile(null);
       alert('Мастер успешно обновлен!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update master:', error);
-      alert('Ошибка при обновлении мастера');
+      const errorMessage = error?.message || error?.response?.data?.detail || 'Ошибка при обновлении мастера';
+      alert(`Ошибка: ${errorMessage}`);
     }
   };
+
 
   const handleUpdateOffering = async () => {
     if (!editingOffering || !editOfferingData.master_id || !editOfferingData.service_id || editOfferingData.price <= 0) return;
@@ -410,9 +481,84 @@ export default function AdminContent() {
                           />
                         </div>
                       </div>
+                      <div className="grid grid-cols-4 items-start gap-4">
+                        <Label htmlFor="master-description" className="text-right pt-2">
+                          Описание
+                        </Label>
+                        <div className="col-span-3">
+                          <Textarea
+                            id="master-description"
+                            value={newMasterDescription}
+                            onChange={(e) => setNewMasterDescription(e.target.value)}
+                            placeholder="Описание мастера (опционально)"
+                            rows={4}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="master-photo" className="text-right">
+                          Фото (URL)
+                        </Label>
+                        <div className="col-span-3">
+                          <Input
+                            id="master-photo"
+                            type="url"
+                            value={newMasterPhoto}
+                            onChange={(e) => setNewMasterPhoto(e.target.value)}
+                            placeholder="https://example.com/photo.jpg"
+                          />
+                          {newMasterPhoto && (
+                            <div className="mt-2">
+                              <p className="text-sm text-muted-foreground mb-1">Предпросмотр:</p>
+                              <img 
+                                src={newMasterPhoto}
+                                alt="Предпросмотр"
+                                className="w-32 h-32 object-cover rounded border"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="master-photo-file" className="text-right">
+                          Фото (файл)
+                        </Label>
+                        <div className="col-span-3">
+                          <Input
+                            id="master-photo-file"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setNewMasterFile(file);
+                            }}
+                          />
+                          {newMasterFile && (
+                            <div className="mt-2">
+                              <p className="text-sm text-muted-foreground mb-1">Предпросмотр:</p>
+                              <img 
+                                src={URL.createObjectURL(newMasterFile)}
+                                alt="Предпросмотр"
+                                className="w-32 h-32 object-cover rounded border"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsMasterDialogOpen(false)}>
+                      <Button variant="outline" onClick={() => {
+                        setIsMasterDialogOpen(false);
+                        setNewMasterFile(null);
+                      }}>
                         Отмена
                       </Button>
                       <Button onClick={handleCreateMaster}>
@@ -681,9 +827,84 @@ export default function AdminContent() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="edit-master-description" className="text-right pt-2">
+                Описание
+              </Label>
+              <div className="col-span-3">
+                <Textarea
+                  id="edit-master-description"
+                  value={editMasterDescription}
+                  onChange={(e) => setEditMasterDescription(e.target.value)}
+                  placeholder="Описание мастера (опционально)"
+                  rows={4}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-master-photo" className="text-right">
+                Фото (URL)
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-master-photo"
+                  type="url"
+                  value={editMasterPhoto}
+                  onChange={(e) => setEditMasterPhoto(e.target.value)}
+                  placeholder="https://example.com/photo.jpg"
+                />
+                {editMasterPhoto && (
+                  <div className="mt-2">
+                    <p className="text-sm text-muted-foreground mb-1">Предпросмотр:</p>
+                    <img 
+                      src={editMasterPhoto}
+                      alt="Предпросмотр"
+                      className="w-32 h-32 object-cover rounded border"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-master-photo-file" className="text-right">
+                Фото (файл)
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-master-photo-file"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setEditMasterFile(file);
+                  }}
+                />
+                {editMasterFile && (
+                  <div className="mt-2">
+                    <p className="text-sm text-muted-foreground mb-1">Предпросмотр:</p>
+                    <img 
+                      src={URL.createObjectURL(editMasterFile)}
+                      alt="Предпросмотр"
+                      className="w-32 h-32 object-cover rounded border"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditMasterDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsEditMasterDialogOpen(false);
+              setEditMasterFile(null);
+            }}>
               Отмена
             </Button>
             <Button onClick={handleUpdateMaster}>
