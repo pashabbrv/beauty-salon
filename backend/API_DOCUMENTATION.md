@@ -289,6 +289,26 @@ DELETE /services/{service_id}/
 ```
 Delete an existing service.
 
+#### Upload Service Photo
+```
+POST /services/{service_id}/photo/
+```
+Upload or update a service's photo.
+
+**Request Format:** `multipart/form-data`
+
+**Form Parameters:**
+- `file` (required): The image file to upload (allowed formats: .jpg, .jpeg, .png, .webp)
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "Haircut",
+  "photo_url": "/media/services/service_1_a1b2c3d4e5f6.jpg"
+}
+```
+
 ### 4. Offerings (Master-Service Combinations)
 
 #### Get All Offerings
@@ -902,6 +922,7 @@ Record money collection from the cash register (not counted as an expense).
 |-------|------|-------------|
 | id | integer | Unique identifier |
 | name | string | Service name |
+| photo_url | string (optional) | URL to service's photo (max 255 characters) |
 
 ### Offering
 | Field | Type | Description |
@@ -979,6 +1000,26 @@ fetch(`${API_BASE_URL}/masters/${masterId}/photo/`, {
 })
 .then(response => response.json())
 .then(data => console.log('Master updated:', data))
+.catch(error => console.error('Error:', error));
+```
+
+#### Uploading a Service Photo
+
+To upload a service photo from the frontend, use a multipart/form-data POST request:
+
+```javascript
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+
+fetch(`${API_BASE_URL}/services/${serviceId}/photo/`, {
+  method: 'POST',
+  headers: {
+    'Auth-Token': authToken
+  },
+  body: formData
+})
+.then(response => response.json())
+.then(data => console.log('Service updated:', data))
 .catch(error => console.error('Error:', error));
 ```
 
