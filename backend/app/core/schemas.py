@@ -13,6 +13,7 @@ class ServiceInfo(BaseModel):
     """Модель с основной информацией об услуге
     \n_(по-умолчанию используется верификация **словаря**)_"""
     name: name_str
+    photo_url: Optional[str] = Field(default=None, max_length=255)
 
 
 class ServiceDB(ServiceInfo):

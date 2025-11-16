@@ -6,7 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { adminApiService, Service, Master, Offering } from '@/services/api';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { formatPhoneNumber, isValidPhoneNumber } from '@/utils/phone';
@@ -16,20 +24,28 @@ export default function AdminContent() {
   const [masters, setMasters] = useState<Master[]>([]);
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editMasterFile, setEditMasterFile] = useState<File | null>(null);
 
-  
-  // Form states
+  // --- услуги ---
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
+  const [isEditServiceDialogOpen, setIsEditServiceDialogOpen] = useState(false);
+
+  const [newServiceName, setNewServiceName] = useState('');
+  const [newServiceFile, setNewServiceFile] = useState<File | null>(null);
+
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [editServiceName, setEditServiceName] = useState('');
+  // храним старый photo_url, чтобы не потерять, если файл не меняли
+  const [editServicePhoto, setEditServicePhoto] = useState<string>('');
+  const [editServiceFile, setEditServiceFile] = useState<File | null>(null);
+
+  // --- мастера / офферы как у тебя сейчас ---
   const [isMasterDialogOpen, setIsMasterDialogOpen] = useState(false);
   const [isOfferingDialogOpen, setIsOfferingDialogOpen] = useState(false);
   
   // Edit states
-  const [isEditServiceDialogOpen, setIsEditServiceDialogOpen] = useState(false);
   const [isEditMasterDialogOpen, setIsEditMasterDialogOpen] = useState(false);
   const [isEditOfferingDialogOpen, setIsEditOfferingDialogOpen] = useState(false);
   
-  const [newServiceName, setNewServiceName] = useState('');
   const [newMasterName, setNewMasterName] = useState('');
   const [newMasterPhone, setNewMasterPhone] = useState('');
   const [newMasterDescription, setNewMasterDescription] = useState('');
@@ -49,15 +65,14 @@ export default function AdminContent() {
   });
   
   // Edit states
-  const [editingService, setEditingService] = useState<Service | null>(null);
   const [editingMaster, setEditingMaster] = useState<Master | null>(null);
   const [editingOffering, setEditingOffering] = useState<Offering | null>(null);
   
-  const [editServiceName, setEditServiceName] = useState('');
   const [editMasterName, setEditMasterName] = useState('');
   const [editMasterPhone, setEditMasterPhone] = useState('');
   const [editMasterDescription, setEditMasterDescription] = useState('');
   const [editMasterPhoto, setEditMasterPhoto] = useState<string>('');
+  const [editMasterFile, setEditMasterFile] = useState<File | null>(null);
   const [editOfferingData, setEditOfferingData] = useState({
     master_id: 0,
     service_id: 0,
@@ -71,9 +86,9 @@ export default function AdminContent() {
         const [servicesData, mastersData, offeringsData] = await Promise.all([
           adminApiService.getServices(),
           adminApiService.getMasters(),
-          adminApiService.getOfferings()
+          adminApiService.getOfferings(),
         ]);
-        
+
         setServices(servicesData);
         setMasters(mastersData);
         setOfferings(offeringsData);
@@ -87,19 +102,107 @@ export default function AdminContent() {
     fetchData();
   }, []);
 
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = (e) => reject(e);
+      reader.readAsDataURL(file);
+    });
+
+  // ---------- УСЛУГИ ----------
+
   const handleCreateService = async () => {
     if (!newServiceName.trim()) return;
-    
+
     try {
-      const newService = await adminApiService.createService({ name: newServiceName });
-      setServices([...services, newService]);
+      // 1. Создаём услугу без фото
+      const baseService = await adminApiService.createService({
+        name: newServiceName.trim(),
+      });
+
+      let finalService = baseService;
+
+      // 2. Если выбран файл — загружаем его отдельным запросом
+      if (newServiceFile) {
+        try {
+          finalService = await adminApiService.uploadServicePhoto(
+            baseService.id,
+            newServiceFile
+          );
+        } catch (e) {
+          alert('Услуга создана, но фото не удалось загрузить');
+        }
+      }
+
+      setServices([...services, finalService]);
       setNewServiceName('');
+      setNewServiceFile(null);
       setIsServiceDialogOpen(false);
+      alert('Услуга успешно добавлена!');
     } catch (error) {
       console.error('Failed to create service:', error);
+      alert('Ошибка при создании услуги');
     }
   };
 
+  const handleEditService = (service: Service) => {
+    setEditingService(service);
+    setEditServiceName(service.name);
+    setEditServicePhoto(service.photo_url || '');
+    setEditServiceFile(null);
+    setIsEditServiceDialogOpen(true);
+  };
+
+  const handleUpdateService = async () => {
+    if (!editingService || !editServiceName.trim()) return;
+
+    try {
+      // 1. Обновляем базовые данные услуги
+      let updatedService = await adminApiService.updateService(editingService.id, {
+        name: editServiceName.trim(),
+      });
+
+      // 2. Если выбран новый файл — загружаем его
+      if (editServiceFile) {
+        try {
+          updatedService = await adminApiService.uploadServicePhoto(
+            editingService.id,
+            editServiceFile
+          );
+        } catch (e) {
+          alert('Услуга обновлена, но фото не удалось загрузить');
+        }
+      }
+
+      setServices(services.map((s) => (s.id === updatedService.id ? updatedService : s)));
+      setIsEditServiceDialogOpen(false);
+      setEditingService(null);
+      setEditServiceFile(null);
+      alert('Услуга успешно обновлена!');
+    } catch (error) {
+      console.error('Failed to update service:', error);
+      alert('Ошибка при обновлении услуги');
+    }
+  };
+
+  const handleDeleteService = async (serviceId: number, serviceName: string) => {
+    if (!window.confirm(`Вы уверены, что хотите удалить услугу "${serviceName}"?`)) return;
+
+    try {
+      await adminApiService.deleteService(serviceId);
+      setServices(services.filter((s) => s.id !== serviceId));
+      const updatedOfferings = await adminApiService.getOfferings();
+      setOfferings(updatedOfferings);
+      alert('Услуга удалена успешно!');
+    } catch (error) {
+      console.error('Failed to delete service:', error);
+      alert('Ошибка при удалении услуги');
+    }
+  };
+
+  // ---------- МАСТЕРА ----------
+  
   const handleCreateMaster = async () => {
     if (!newMasterName.trim() || !newMasterPhone.trim()) return;
 
@@ -152,7 +255,6 @@ export default function AdminContent() {
     }
   };
 
-
   const handleCreateOffering = async () => {
     if (!selectedOffering.master_id || !selectedOffering.service_id || selectedOffering.price <= 0) return;
     
@@ -172,12 +274,6 @@ export default function AdminContent() {
   };
 
   // Edit handlers
-  const handleEditService = (service: Service) => {
-    setEditingService(service);
-    setEditServiceName(service.name);
-    setIsEditServiceDialogOpen(true);
-  };
-
   const handleEditMaster = (master: Master) => {
     setEditingMaster(master);
     setEditMasterName(master.name);
@@ -188,7 +284,6 @@ export default function AdminContent() {
     setIsEditMasterDialogOpen(true);
   };
 
-
   const handleEditOffering = (offering: Offering) => {
     setEditingOffering(offering);
     setEditOfferingData({
@@ -198,23 +293,6 @@ export default function AdminContent() {
       duration: offering.duration
     });
     setIsEditOfferingDialogOpen(true);
-  };
-
-  const handleUpdateService = async () => {
-    if (!editingService || !editServiceName.trim()) return;
-    
-    try {
-      const updatedService = await adminApiService.updateService(editingService.id, { name: editServiceName });
-      setServices(services.map(service => 
-        service.id === updatedService.id ? updatedService : service
-      ));
-      setIsEditServiceDialogOpen(false);
-      setEditingService(null);
-      alert('Услуга успешно обновлена!');
-    } catch (error) {
-      console.error('Failed to update service:', error);
-      alert('Ошибка при обновлении услуги');
-    }
   };
 
   const handleUpdateMaster = async () => {
@@ -272,7 +350,6 @@ export default function AdminContent() {
     }
   };
 
-
   const handleUpdateOffering = async () => {
     if (!editingOffering || !editOfferingData.master_id || !editOfferingData.service_id || editOfferingData.price <= 0) return;
     
@@ -291,25 +368,6 @@ export default function AdminContent() {
   };
 
   // Add delete service function
-  const handleDeleteService = async (serviceId: number, serviceName: string) => {
-    if (!window.confirm(`Вы уверены, что хотите удалить услугу "${serviceName}"?`)) {
-      return;
-    }
-    
-    try {
-      await adminApiService.deleteService(serviceId);
-      setServices(services.filter(service => service.id !== serviceId));
-      // Refresh offerings to remove any offerings associated with the deleted service
-      const updatedOfferings = await adminApiService.getOfferings();
-      setOfferings(updatedOfferings);
-      alert('Услуга удалена успешно!');
-    } catch (error) {
-      console.error('Failed to delete service:', error);
-      alert('Ошибка при удалении услуги');
-    }
-  };
-
-  // Add delete master function
   const handleDeleteMaster = async (masterId: number, masterName: string) => {
     if (!window.confirm(`Вы уверены, что хотите удалить мастера "${masterName}"?`)) {
       return;
@@ -354,9 +412,7 @@ export default function AdminContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Услуги</CardTitle>
-                  <CardDescription>
-                    Список всех предоставляемых услуг
-                  </CardDescription>
+                  <CardDescription>Список всех предоставляемых услуг</CardDescription>
                 </div>
                 <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
                   <DialogTrigger asChild>
@@ -368,9 +424,7 @@ export default function AdminContent() {
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Добавить новую услугу</DialogTitle>
-                      <DialogDescription>
-                        Введите название новой услуги
-                      </DialogDescription>
+                      <DialogDescription>Введите название и выберите фото с устройства</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
@@ -386,14 +440,49 @@ export default function AdminContent() {
                           />
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="service-photo-file" className="text-right">
+                          Фото (файл)
+                        </Label>
+                        <div className="col-span-3">
+                          <Input
+                            id="service-photo-file"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setNewServiceFile(file);
+                            }}
+                          />
+                          {newServiceFile && (
+                            <div className="mt-2">
+                              <p className="text-sm text-muted-foreground mb-1">Предпросмотр:</p>
+                              <img
+                                src={URL.createObjectURL(newServiceFile)}
+                                alt="Предпросмотр услуги"
+                                className="w-32 h-32 object-cover rounded border"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsServiceDialogOpen(false)}>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsServiceDialogOpen(false);
+                          setNewServiceFile(null);
+                        }}
+                      >
                         Отмена
                       </Button>
-                      <Button onClick={handleCreateService}>
-                        Добавить
-                      </Button>
+                      <Button onClick={handleCreateService}>Добавить</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -412,12 +501,29 @@ export default function AdminContent() {
                   {services.map((service) => (
                     <TableRow key={service.id}>
                       <TableCell className="font-medium">{service.id}</TableCell>
-                      <TableCell>{service.name}</TableCell>
+                      <TableCell className="flex items-center gap-3">
+                        {service.photo_url && (
+                          <img
+                            src={service.photo_url}
+                            alt={service.name}
+                            className="w-10 h-10 object-cover rounded border"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        )}
+                        <span>{service.name}</span>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" onClick={() => handleEditService(service)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteService(service.id, service.name)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteService(service.id, service.name)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -778,9 +884,45 @@ export default function AdminContent() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-service-photo-file" className="text-right">
+                Фото (файл)
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="edit-service-photo-file"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setEditServiceFile(file);
+                  }}
+                />
+                {(editServiceFile || editServicePhoto) && (
+                  <div className="mt-2">
+                    <p className="text-sm text-muted-foreground mb-1">Предпросмотр:</p>
+                    <img
+                      src={editServiceFile ? URL.createObjectURL(editServiceFile) : editServicePhoto}
+                      alt="Предпросмотр услуги"
+                      className="w-32 h-32 object-cover rounded border"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditServiceDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditServiceDialogOpen(false);
+                setEditServiceFile(null);
+              }}
+            >
               Отмена
             </Button>
             <Button onClick={handleUpdateService}>

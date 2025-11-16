@@ -1,6 +1,7 @@
 export interface Service {
   id: number;
   name: string;
+  photo_url?: string;
 }
 
 export interface Master {
@@ -485,15 +486,18 @@ class AdminApiService {
   async createService(service: { name: string }): Promise<Service> {
     return this.request<Service>('/services/', {
       method: 'POST',
-      body: JSON.stringify(service)
+      body: JSON.stringify(service),
     });
   }
 
   // Add update service method
-  async updateService(serviceId: number, service: { name: string }): Promise<Service> {
+  async updateService(
+    serviceId: number,
+    service: { name: string },
+  ): Promise<Service> {
     return this.request<Service>(`/services/${serviceId}/`, {
       method: 'PUT',
-      body: JSON.stringify(service)
+      body: JSON.stringify(service),
     });
   }
 
@@ -527,6 +531,18 @@ class AdminApiService {
   async deleteMaster(masterId: number): Promise<void> {
     return this.request<void>(`/masters/${masterId}/`, {
       method: 'DELETE'
+    });
+  }
+
+  async uploadServicePhoto(serviceId: number, file: File): Promise<Service> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return this.request<Service>(`/services/${serviceId}/photo/`, {
+      method: "POST",
+      body: formData,
+      // Внимание: НЕ ставим здесь Content-Type,
+      // request() сам поймет, что это FormData, и не добавит application/json
     });
   }
 

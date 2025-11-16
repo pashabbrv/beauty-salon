@@ -50,6 +50,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./backend:/app
+      - ./media:/app/media 
     depends_on:
       - db
       - rabbitmq
